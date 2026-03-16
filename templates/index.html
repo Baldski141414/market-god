@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>⚡ MARKET GOD 2.0 — GOD MODE</title>
+<title>⚡ MARKET GOD 3.0 — LEVEL 4 INSTITUTIONAL</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet"/>
 <style>
@@ -541,6 +541,90 @@ a:hover { text-decoration: underline; }
 }
 .news-pub { font-size: 9px; color: var(--text-dim); margin-top: auto; }
 
+/* ── AI Score Meter ────────────────────────────────────────────────────── */
+.ai-score-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'Orbitron', monospace; font-size: 9px; font-weight: 700;
+  padding: 2px 7px; border-radius: 3px; border: 1px solid;
+  letter-spacing: 1px; white-space: nowrap;
+}
+
+/* ── Smart Money Section ───────────────────────────────────────────────── */
+.sm-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 0;
+}
+.sm-col {
+  padding: 10px 14px;
+  border-right: 1px solid var(--border);
+}
+.sm-col:last-child { border-right: none; }
+.sm-col-title {
+  font-size: 9px; letter-spacing: 2px; text-transform: uppercase;
+  color: var(--text-dim); font-weight: 700; margin-bottom: 8px;
+  padding-bottom: 6px; border-bottom: 1px solid var(--border);
+}
+.sm-row {
+  display: flex; align-items: flex-start; gap: 8px;
+  padding: 6px 0; border-bottom: 1px solid rgba(30,30,64,0.5); font-size: 11px;
+}
+.sm-row:last-child { border-bottom: none; }
+.sm-ticker {
+  font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700;
+  color: var(--cyan); min-width: 38px;
+}
+.sm-info { flex: 1; line-height: 1.5; }
+.sm-val  { font-size: 10px; color: var(--gold); font-weight: 600; }
+.sm-sub  { font-size: 9px; color: var(--text-dim); }
+.sm-buy-badge  { font-size: 9px; color: var(--green); font-weight: 700; padding: 1px 5px; border: 1px solid var(--green); border-radius: 2px; }
+.sm-sell-badge { font-size: 9px; color: var(--red);   font-weight: 700; padding: 1px 5px; border: 1px solid var(--red);   border-radius: 2px; }
+.sm-call-badge { font-size: 9px; color: var(--green); font-weight: 700; padding: 1px 5px; border: 1px solid var(--green); border-radius: 2px; }
+.sm-put-badge  { font-size: 9px; color: var(--red);   font-weight: 700; padding: 1px 5px; border: 1px solid var(--red);   border-radius: 2px; }
+.sm-squeeze-badge { font-size: 9px; color: var(--orange); font-weight: 700; padding: 1px 5px; border: 1px solid var(--orange); border-radius: 2px; }
+.sm-empty { color: var(--text-dim); font-size: 10px; padding: 12px 0; text-align: center; }
+
+/* Fed Sentiment Bar */
+.fed-bar-wrap {
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+}
+.fed-bar-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 6px; font-size: 11px;
+}
+.fed-bar-label { color: var(--text-dim); font-size: 9px; letter-spacing: 1px; text-transform: uppercase; }
+.fed-sentiment-label { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700; }
+.fed-bar-track {
+  height: 8px; background: var(--card2); border-radius: 4px;
+  overflow: hidden; border: 1px solid var(--border);
+}
+.fed-bar-fill {
+  height: 100%; border-radius: 4px; transition: width 0.8s ease;
+}
+
+/* ── Backtest Section ─────────────────────────────────────────────────── */
+.bt-table {
+  width: 100%; border-collapse: collapse; font-size: 11px;
+}
+.bt-table th {
+  padding: 5px 10px; text-align: left; border-bottom: 1px solid var(--border);
+  font-size: 9px; letter-spacing: 1px; color: var(--text-dim); text-transform: uppercase;
+}
+.bt-table td {
+  padding: 7px 10px; border-bottom: 1px solid rgba(30,30,64,0.5);
+}
+.bt-table tr:last-child td { border-bottom: none; }
+.bt-sym { font-family: 'Orbitron', monospace; font-size: 10px; font-weight: 700; color: var(--cyan); }
+.bt-run-btn {
+  background: transparent; border: 1px solid var(--purple);
+  color: var(--purple); padding: 3px 12px; border-radius: 4px;
+  cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px;
+  letter-spacing: 1px; transition: all .15s;
+}
+.bt-run-btn:hover { background: rgba(176,0,255,.1); box-shadow: 0 0 8px rgba(176,0,255,.3); }
+.bt-loading { text-align: center; padding: 20px; color: var(--text-dim); font-size: 11px; }
+
 /* ── Loading / Error states ───────────────────────────────────────────── */
 .loading { color: var(--text-dim); text-align: center; padding: 20px; animation: blink 1s infinite; }
 @keyframes blink { 0%,100%{opacity:.8} 50%{opacity:.3} }
@@ -555,12 +639,18 @@ a:hover { text-decoration: underline; }
   .pt-bottom  { grid-template-columns: 1fr; }
   .pt-positions { border-right: none; border-bottom: 1px solid var(--border); }
 }
+@media (max-width: 900px) {
+  .sm-grid { grid-template-columns: 1fr 1fr; }
+  .sm-col:last-child { border-top: 1px solid var(--border); grid-column: 1/-1; border-right: none; }
+}
 @media (max-width: 768px) {
   .row-3col, .row-2col { grid-template-columns: 1fr; }
   .macro-grid { grid-template-columns: repeat(2, 1fr); }
   .news-grid  { grid-template-columns: 1fr; }
   .pt-stats   { grid-template-columns: repeat(2, 1fr); }
   .pt-trade-row { grid-template-columns: 36px 44px 1fr 1fr; }
+  .sm-grid { grid-template-columns: 1fr; }
+  .sm-col { border-right: none; border-bottom: 1px solid var(--border); }
 }
 </style>
 </head>
@@ -568,7 +658,7 @@ a:hover { text-decoration: underline; }
 
 <!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <div id="header">
-  <div class="logo">⚡ MARKET GOD 2.0</div>
+  <div class="logo">⚡ MARKET GOD 3.0 <span style="font-size:10px;color:var(--purple);letter-spacing:2px">LVL4</span></div>
   <div class="header-right">
     <div class="live-dot"></div>
     <div class="header-meta">
@@ -738,7 +828,59 @@ a:hover { text-decoration: underline; }
     </div>
   </div><!-- /paper trading -->
 
-  <!-- Row 4: Trends + Macro -->
+  <!-- Row 4: Smart Money -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">🧠 SMART MONEY — INSTITUTIONAL INTELLIGENCE</span>
+      <div style="display:flex;gap:8px;align-items:center">
+        <span class="card-badge badge-free">SEC EDGAR · FINRA · OPTIONS</span>
+        <span id="sm-alert-badge" style="display:none;font-family:'Orbitron',monospace;font-size:9px;color:var(--gold);border:1px solid var(--gold);padding:2px 8px;border-radius:3px;"></span>
+      </div>
+    </div>
+    <div class="sm-grid" id="sm-grid">
+      <div class="sm-col">
+        <div class="sm-col-title">🏛️ Insider Moves (SEC Form 4)</div>
+        <div id="sm-insider"><div class="sm-empty">Loading...</div></div>
+      </div>
+      <div class="sm-col">
+        <div class="sm-col-title">🔥 Short Squeeze Candidates</div>
+        <div id="sm-squeeze"><div class="sm-empty">Loading...</div></div>
+      </div>
+      <div class="sm-col">
+        <div class="sm-col-title">⚡ Unusual Options Flow</div>
+        <div id="sm-options"><div class="sm-empty">Loading...</div></div>
+      </div>
+    </div>
+    <div class="fed-bar-wrap" id="fed-bar-wrap">
+      <div class="fed-bar-header">
+        <div>
+          <div class="fed-bar-label">Federal Reserve Sentiment</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:2px" id="fed-articles-preview"></div>
+        </div>
+        <span class="fed-sentiment-label" id="fed-label" style="color:var(--text-dim)">NEUTRAL</span>
+      </div>
+      <div class="fed-bar-track">
+        <div class="fed-bar-fill" id="fed-bar-fill" style="width:50%;background:var(--gold)"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:9px;color:var(--text-dim)">
+        <span style="color:var(--green)">DOVISH → Rate Cuts → Bullish</span>
+        <span style="color:var(--red)">HAWKISH → Rate Hikes → Bearish</span>
+      </div>
+    </div>
+  </div><!-- /smart money -->
+
+  <!-- Row 5: Backtest -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📊 60-DAY SIGNAL BACKTEST</span>
+      <button class="bt-run-btn" onclick="runBacktest()">▶ RUN BACKTEST</button>
+    </div>
+    <div id="bt-content">
+      <div class="bt-loading">Click "RUN BACKTEST" to test signals vs buy-and-hold over last 60 days</div>
+    </div>
+  </div>
+
+  <!-- Row 6: Trends + Macro -->
   <div class="row-2col">
 
     <!-- Google Trends -->
@@ -889,7 +1031,172 @@ function signalBadge(sig) {
   if (!sig || !sig.label) return '';
   const c   = SIGNAL_COLORS[sig.label] || { color: 'var(--text-dim)', bg: 'transparent' };
   const tip = (sig.reasons || []).join(' · ') || sig.label;
-  return `<div class="signal-badge" style="color:${c.color};border-color:${c.color};background:${c.bg}" title="${tip}">${sig.label.toUpperCase()}</div>`;
+  const scoreStr = sig.score != null ? ` <span style="font-size:8px;opacity:0.8">${sig.score}</span>` : '';
+  return `<div class="signal-badge" style="color:${c.color};border-color:${c.color};background:${c.bg}" title="${tip}">${sig.label.toUpperCase()}${scoreStr}</div>`;
+}
+
+/* ── Render: Smart Money ─────────────────────────────────────────────────── */
+function renderSmartMoney(data) {
+  const sm = data.smart_money || {};
+  const fed = data.fed_sentiment || {};
+  const earnings = data.earnings || {};
+  const si = data.short_interest || {};
+
+  // Alert badge
+  const alertCount = sm.alert_count || 0;
+  const alertBadge = document.getElementById('sm-alert-badge');
+  if (alertCount > 0) {
+    alertBadge.textContent = `${alertCount} ALERTS`;
+    alertBadge.style.display = 'inline-block';
+  }
+
+  // Insider moves
+  const insiderEl = document.getElementById('sm-insider');
+  const buys  = sm.insider_buys  || [];
+  const sells = sm.insider_sells || [];
+  const allInsider = [...buys.map(x=>({...x,dir:'BUY'})), ...sells.map(x=>({...x,dir:'SELL'}))];
+  allInsider.sort((a,b) => (b.value||0) - (a.value||0));
+
+  if (!allInsider.length) {
+    insiderEl.innerHTML = '<div class="sm-empty">No insider transactions in last 30 days</div>';
+  } else {
+    insiderEl.innerHTML = allInsider.slice(0,5).map(t => {
+      const badge = t.dir === 'BUY'
+        ? '<span class="sm-buy-badge">BUY</span>'
+        : '<span class="sm-sell-badge">SELL</span>';
+      const val = t.value > 1e6 ? `$${(t.value/1e6).toFixed(1)}M` : `$${Math.round(t.value/1000)}K`;
+      return `<div class="sm-row">
+        <span class="sm-ticker">${t.ticker}</span>
+        <div class="sm-info">
+          <div style="display:flex;gap:6px;align-items:center">${badge}
+            <span class="sm-val">${val}</span>
+          </div>
+          <div class="sm-sub">${t.owner || 'Insider'} · ${t.title || ''}</div>
+          <div class="sm-sub">${t.date || ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Short squeeze
+  const squeezeEl = document.getElementById('sm-squeeze');
+  const squeeze = sm.squeeze_candidates || [];
+  if (!squeeze.length) {
+    squeezeEl.innerHTML = '<div class="sm-empty">No high short interest detected</div>';
+  } else {
+    squeezeEl.innerHTML = squeeze.slice(0,5).map(s => {
+      const pctCol = s.current_pct > 0 ? 'var(--green)' : 'var(--red)';
+      const pctStr = (s.current_pct > 0 ? '+' : '') + (s.current_pct||0).toFixed(2) + '%';
+      const alertBadge = s.squeeze_alert ? '<span class="sm-squeeze-badge">SQUEEZE</span>' : '';
+      return `<div class="sm-row">
+        <span class="sm-ticker">${s.ticker}</span>
+        <div class="sm-info">
+          <div style="display:flex;gap:6px;align-items:center">
+            <span class="sm-val">${s.short_pct?.toFixed(1)||'?'}% short</span>
+            ${alertBadge}
+          </div>
+          <div class="sm-sub">Today: <span style="color:${pctCol}">${pctStr}</span>${s.short_ratio ? ` · ${s.short_ratio}d to cover` : ''}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Unusual options
+  const optsEl = document.getElementById('sm-options');
+  const unusual = sm.unusual_options || [];
+  if (!unusual.length) {
+    optsEl.innerHTML = '<div class="sm-empty">No unusual options flow detected</div>';
+  } else {
+    optsEl.innerHTML = unusual.slice(0,6).map(o => {
+      const badge = o.type === 'CALL'
+        ? '<span class="sm-call-badge">CALL</span>'
+        : '<span class="sm-put-badge">PUT</span>';
+      const vol = o.volume >= 1000 ? `${(o.volume/1000).toFixed(1)}K vol` : `${o.volume} vol`;
+      return `<div class="sm-row">
+        <span class="sm-ticker">${o.ticker}</span>
+        <div class="sm-info">
+          <div style="display:flex;gap:6px;align-items:center">${badge}
+            <span class="sm-val">$${o.strike}</span>
+          </div>
+          <div class="sm-sub">${vol} · ${o.ratio}x OI · exp ${(o.exp||'').slice(5)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Fed sentiment bar
+  if (fed.sentiment) {
+    const fedLabel = document.getElementById('fed-label');
+    const fedFill  = document.getElementById('fed-bar-fill');
+    const fedPrev  = document.getElementById('fed-articles-preview');
+
+    const s = fed.sentiment;
+    const score = fed.score || 50;
+    let fedColor = 'var(--gold)';
+    let barWidth = '50%';
+    if (s === 'hawkish') {
+      fedColor = 'var(--red)';
+      barWidth = score + '%';
+    } else if (s === 'dovish') {
+      fedColor = 'var(--green)';
+      barWidth = (100 - score) + '%';
+    }
+
+    fedLabel.textContent = s.toUpperCase();
+    fedLabel.style.color = fedColor;
+    fedFill.style.width = barWidth;
+    fedFill.style.background = fedColor;
+
+    const art = (fed.articles || [])[0];
+    if (art) fedPrev.textContent = art.title?.slice(0, 80) || '';
+  }
+}
+
+/* ── Render: Backtest ─────────────────────────────────────────────────────── */
+async function runBacktest() {
+  const el = document.getElementById('bt-content');
+  el.innerHTML = '<div class="bt-loading">Running 60-day backtest... this may take 10-20s</div>';
+  try {
+    const r    = await fetch('/api/backtest');
+    const data = await r.json();
+    const res  = data.results || {};
+
+    const rows = Object.entries(res).map(([ticker, d]) => {
+      if (d.error) return `<tr><td class="bt-sym">${ticker}</td><td colspan="5" style="color:var(--red)">${d.error}</td></tr>`;
+      const sigCol = d.signal_return >= 0 ? 'var(--green)' : 'var(--red)';
+      const bahCol = d.buy_hold_return >= 0 ? 'var(--green)' : 'var(--red)';
+      const alphaCol = d.alpha >= 0 ? 'var(--green)' : 'var(--red)';
+      const alphaIcon = d.alpha >= 0 ? '▲' : '▼';
+      return `<tr>
+        <td class="bt-sym">${ticker}</td>
+        <td style="color:${sigCol};font-weight:700">${d.signal_return >= 0 ? '+' : ''}${d.signal_return}%</td>
+        <td style="color:${bahCol}">${d.buy_hold_return >= 0 ? '+' : ''}${d.buy_hold_return}%</td>
+        <td style="color:${alphaCol};font-weight:700">${alphaIcon} ${Math.abs(d.alpha).toFixed(2)}%</td>
+        <td style="color:var(--text-dim)">${d.trades} trades</td>
+        <td style="color:var(--text-dim);font-size:9px">$${d.start_price} → $${d.end_price}</td>
+      </tr>`;
+    }).join('');
+
+    el.innerHTML = `<div style="padding:0 4px;overflow-x:auto">
+      <table class="bt-table">
+        <thead><tr>
+          <th>TICKER</th>
+          <th>SIGNAL RETURN</th>
+          <th>BUY & HOLD</th>
+          <th>ALPHA</th>
+          <th>TRADES</th>
+          <th>PRICE RANGE</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <div style="padding:8px 10px;font-size:9px;color:var(--text-dim)">
+        Backtest period: ${data.period} · Generated: ${new Date(data.generated).toLocaleTimeString()} ·
+        Strategy: momentum signals (±1%/±3% thresholds) · Starting capital: $10,000 per ticker
+      </div>
+    </div>`;
+  } catch(e) {
+    el.innerHTML = `<div class="err">Backtest failed: ${e.message}</div>`;
+  }
 }
 
 /* ── Render: Ticker Tape ─────────────────────────────────────────────────── */
@@ -1246,6 +1553,7 @@ async function refresh() {
     renderCrypto(data.crypto, signals);
     renderFearGreed(data.fear_greed);
     renderWSB(data.reddit);
+    renderSmartMoney(data);
     renderTrends(data.trends);
     renderMacro(data.macro);
     renderNews(data.news);
