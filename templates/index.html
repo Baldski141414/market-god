@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>⚡ MARKET GOD 2.0 — GOD MODE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=JetBrains+Mono:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+/* ── Reset & Variables ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:        #07070f;
+  --card:      #0d0d1e;
+  --card2:     #10102a;
+  --border:    #1e1e40;
+  --border2:   #2a2a60;
+  --cyan:      #00f5ff;
+  --purple:    #b000ff;
+  --pink:      #ff0080;
+  --green:     #00ff88;
+  --red:       #ff2244;
+  --gold:      #ffd700;
+  --orange:    #ff8800;
+  --text:      #d0d8ff;
+  --text-dim:  #6068a0;
+  --glow-c:    0 0 12px rgba(0,245,255,0.4);
+  --glow-p:    0 0 12px rgba(176,0,255,0.4);
+  --glow-g:    0 0 12px rgba(0,255,136,0.4);
+  --glow-r:    0 0 12px rgba(255,34,68,0.4);
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 13px;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+a { color: var(--cyan); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Scrollbar ────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+/* ── Header ───────────────────────────────────────────────────────────── */
+#header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: linear-gradient(90deg, #07070f 0%, #0d0030 50%, #07070f 100%);
+  border-bottom: 1px solid var(--border2);
+  position: sticky; top: 0; z-index: 100;
+  backdrop-filter: blur(8px);
+}
+.logo {
+  font-family: 'Orbitron', monospace;
+  font-size: 22px;
+  font-weight: 900;
+  background: linear-gradient(90deg, var(--cyan), var(--purple), var(--pink));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: 3px;
+  text-shadow: none;
+}
+.header-right { display: flex; align-items: center; gap: 16px; }
+.live-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse 1.5s infinite;
+}
+@keyframes pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .5; transform: scale(1.4); }
+}
+.header-meta { color: var(--text-dim); font-size: 11px; }
+#countdown {
+  font-family: 'Orbitron', monospace;
+  color: var(--cyan);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+/* ── Ticker Tape ──────────────────────────────────────────────────────── */
+#ticker-tape {
+  background: #0a0a18;
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  padding: 6px 0;
+  position: relative;
+}
+.tape-track {
+  display: flex;
+  gap: 0;
+  animation: scroll-tape 40s linear infinite;
+  width: max-content;
+}
+#ticker-tape:hover .tape-track { animation-play-state: paused; }
+@keyframes scroll-tape {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.tape-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 20px;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+.tape-sym  { font-weight: 700; color: var(--text); letter-spacing: 1px; }
+.tape-price{ color: var(--cyan); }
+.tape-chg  { font-size: 11px; }
+.up   { color: var(--green); }
+.down { color: var(--red); }
+
+/* ── Main Layout ──────────────────────────────────────────────────────── */
+#dashboard {
+  max-width: 1800px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Card ─────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card2);
+}
+.card-title {
+  font-family: 'Orbitron', monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: var(--cyan);
+  text-transform: uppercase;
+}
+.card-badge {
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid;
+  letter-spacing: 1px;
+}
+.badge-live  { color: var(--green);  border-color: var(--green);  box-shadow: var(--glow-g); }
+.badge-free  { color: var(--purple); border-color: var(--purple); box-shadow: var(--glow-p); }
+.badge-rss   { color: var(--orange); border-color: var(--orange); }
+
+/* ── Row 1: Stocks + Crypto + Fear&Greed ──────────────────────────────── */
+.row-3col {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1.1fr;
+  gap: 16px;
+}
+
+/* Stock / Crypto grid --------------------------------------------------- */
+.asset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px;
+}
+.asset-tile {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+}
+.asset-tile:hover,
+.asset-tile.active {
+  border-color: var(--cyan);
+  box-shadow: 0 0 14px rgba(0,245,255,.2);
+}
+.asset-tile.active { background: rgba(0,245,255,.04); }
+.asset-sym   { font-family: 'Orbitron', monospace; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+.asset-price { font-size: 15px; font-weight: 600; color: var(--text); margin: 3px 0 1px; }
+.asset-pct   { font-size: 11px; }
+
+/* ── Fear & Greed Gauge ─────────────────────────────────────────────────── */
+.fg-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px 10px 10px;
+}
+.gauge-svg { width: 100%; max-width: 280px; overflow: visible; }
+.gauge-zone-label {
+  font-size: 9px;
+  fill: var(--text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+.fg-score {
+  font-family: 'Orbitron', monospace;
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: -10px;
+}
+.fg-label {
+  font-size: 13px;
+  letter-spacing: 2px;
+  margin: 4px 0 12px;
+  text-transform: uppercase;
+  font-family: 'Orbitron', monospace;
+}
+.fg-history {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 0 8px;
+}
+.fg-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  title: attr(data-tip);
+  cursor: default;
+}
+
+/* ── Row 2: TradingView Chart + WSB ─────────────────────────────────────── */
+.row-chart {
+  display: grid;
+  grid-template-columns: 3fr 1.5fr;
+  gap: 16px;
+}
+.tv-wrap {
+  height: 450px;
+  padding: 0;
+  position: relative;
+}
+.tv-controls {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--card2);
+}
+.tv-btn {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  color: var(--text-dim);
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  transition: all .15s;
+}
+.tv-btn:hover, .tv-btn.active {
+  border-color: var(--cyan);
+  color: var(--cyan);
+  box-shadow: 0 0 8px rgba(0,245,255,.2);
+}
+#tv-container { height: 400px; }
+
+/* WSB Sentiment --------------------------------------------------------- */
+.wsb-list {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.wsb-item {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  cursor: pointer;
+  transition: border-color .2s;
+}
+.wsb-item:hover { border-color: var(--border2); }
+.wsb-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+.wsb-ticker { font-family: 'Orbitron', monospace; font-size: 11px; font-weight: 700; color: var(--cyan); }
+.wsb-mentions { font-size: 10px; color: var(--text-dim); }
+.sentiment-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  overflow: hidden;
+  position: relative;
+}
+.sentiment-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width .6s ease;
+}
+.sentiment-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  margin-top: 2px;
+}
+.wsb-posts {
+  display: none;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+}
+.wsb-item.open .wsb-posts { display: flex; }
+.wsb-post-title {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+/* ── Row 3: Trends + Macro ─────────────────────────────────────────────── */
+.row-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* Google Trends --------------------------------------------------------- */
+.trends-list {
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.trend-item {
+  display: grid;
+  grid-template-columns: 120px 40px 1fr 60px;
+  align-items: center;
+  gap: 10px;
+}
+.trend-kw   { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.trend-val  { font-size: 14px; font-weight: 600; text-align: right; }
+.trend-pct  { font-size: 11px; text-align: right; white-space: nowrap; }
+.trend-spark{ display: flex; align-items: flex-end; }
+
+/* Macro Indicators ------------------------------------------------------ */
+.macro-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  padding: 10px;
+}
+.macro-tile {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+.macro-label { font-size: 9px; color: var(--text-dim); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.macro-value { font-family: 'Orbitron', monospace; font-size: 18px; font-weight: 700; }
+.macro-sub   { font-size: 10px; color: var(--text-dim); margin-top: 2px; }
+
+/* ── Row 4: News ─────────────────────────────────────────────────────────── */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 12px;
+}
+.news-card {
+  background: var(--card2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color .2s;
+}
+.news-card:hover { border-color: var(--border2); }
+.news-source {
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.src-reuters { color: var(--orange); }
+.src-cnbc    { color: var(--cyan); }
+.news-title {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.news-summary {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.news-pub { font-size: 9px; color: var(--text-dim); margin-top: auto; }
+
+/* ── Loading / Error states ───────────────────────────────────────────── */
+.loading { color: var(--text-dim); text-align: center; padding: 20px; animation: blink 1s infinite; }
+@keyframes blink { 0%,100%{opacity:.8} 50%{opacity:.3} }
+.err { color: var(--red); font-size: 10px; padding: 6px 10px; }
+
+/* ── Responsive ───────────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .row-3col   { grid-template-columns: 1fr 1fr; }
+  .row-chart  { grid-template-columns: 1fr; }
+  .news-grid  { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .row-3col, .row-2col { grid-template-columns: 1fr; }
+  .macro-grid { grid-template-columns: repeat(2, 1fr); }
+  .news-grid  { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<div id="header">
+  <div class="logo">⚡ MARKET GOD 2.0</div>
+  <div class="header-right">
+    <div class="live-dot"></div>
+    <div class="header-meta">
+      UPDATED: <span id="last-updated">—</span>
+    </div>
+    <div id="countdown">REFRESH IN 60s</div>
+  </div>
+</div>
+
+<!-- ── Ticker Tape ────────────────────────────────────────────────────────── -->
+<div id="ticker-tape">
+  <div class="tape-track" id="tape-track">
+    <div class="tape-item"><span class="tape-sym">LOADING</span><span class="tape-price">...</span></div>
+  </div>
+</div>
+
+<!-- ── Dashboard ──────────────────────────────────────────────────────────── -->
+<div id="dashboard">
+
+  <!-- Row 1: Stocks | Crypto | Fear&Greed -->
+  <div class="row-3col">
+
+    <!-- Stocks -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📈 STOCKS</span>
+        <span class="card-badge badge-live">LIVE</span>
+      </div>
+      <div class="asset-grid" id="stocks-grid">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Crypto -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">₿ CRYPTO</span>
+        <span class="card-badge badge-free">COINGECKO</span>
+      </div>
+      <div class="asset-grid" id="crypto-grid">
+        <div class="loading">Loading...</div>
+      </div>
+    </div>
+
+    <!-- Fear & Greed -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">😱 FEAR &amp; GREED INDEX</span>
+        <span class="card-badge badge-free">ALTERNATIVE.ME</span>
+      </div>
+      <div class="fg-wrap">
+        <svg class="gauge-svg" viewBox="0 0 300 170" id="gauge-svg">
+          <defs>
+            <linearGradient id="gauge-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%"   stop-color="#ff2244"/>
+              <stop offset="25%"  stop-color="#ff8800"/>
+              <stop offset="50%"  stop-color="#ffd700"/>
+              <stop offset="75%"  stop-color="#88ff44"/>
+              <stop offset="100%" stop-color="#00ff88"/>
+            </linearGradient>
+          </defs>
+          <!-- Background track -->
+          <path d="M 30 148 A 120 120 0 0 1 270 148"
+                fill="none" stroke="#1a1a30" stroke-width="22" stroke-linecap="round"/>
+          <!-- Colored arc -->
+          <path d="M 30 148 A 120 120 0 0 1 270 148"
+                fill="none" stroke="url(#gauge-grad)" stroke-width="22" stroke-linecap="round"/>
+          <!-- Zone labels -->
+          <text class="gauge-zone-label" x="10"  y="155">FEAR</text>
+          <text class="gauge-zone-label" x="130" y="22" text-anchor="middle">NEUTRAL</text>
+          <text class="gauge-zone-label" x="260" y="155" text-anchor="end">GREED</text>
+          <!-- Needle -->
+          <g id="gauge-needle" style="transform-origin:150px 148px; transform:rotate(-90deg); transition:transform 1s ease">
+            <line x1="150" y1="148" x2="150" y2="42"
+                  stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+            <circle cx="150" cy="148" r="6" fill="white"/>
+          </g>
+        </svg>
+        <div class="fg-score" id="fg-score" style="color:var(--gold)">—</div>
+        <div class="fg-label" id="fg-label">—</div>
+        <div class="fg-history" id="fg-history"></div>
+      </div>
+    </div>
+
+  </div><!-- /row-3col -->
+
+  <!-- Row 2: TradingView + WSB -->
+  <div class="row-chart">
+
+    <!-- TradingView -->
+    <div class="card tv-wrap">
+      <div class="card-header" style="padding:8px 14px">
+        <span class="card-title">📊 LIVE CHARTS — TRADINGVIEW</span>
+        <div class="tv-controls" style="border:none;padding:0;background:transparent">
+          <!-- filled by JS -->
+        </div>
+      </div>
+      <div class="tv-controls" id="tv-controls"></div>
+      <div id="tv-container"></div>
+    </div>
+
+    <!-- WSB Sentiment -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🚀 WSB SENTIMENT</span>
+        <span class="card-badge badge-free">r/WallStreetBets</span>
+      </div>
+      <div class="wsb-list" id="wsb-list">
+        <div class="loading">Scanning WSB...</div>
+      </div>
+    </div>
+
+  </div><!-- /row-chart -->
+
+  <!-- Row 3: Trends + Macro -->
+  <div class="row-2col">
+
+    <!-- Google Trends -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🔥 GOOGLE TRENDS</span>
+        <span class="card-badge badge-free">pytrends</span>
+      </div>
+      <div class="trends-list" id="trends-list">
+        <div class="loading">Fetching trends...</div>
+      </div>
+    </div>
+
+    <!-- Macro Indicators -->
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">🏛️ MACRO INDICATORS</span>
+        <span class="card-badge badge-free">BLS + yfinance</span>
+      </div>
+      <div class="macro-grid" id="macro-grid">
+        <div class="loading" style="grid-column:1/-1">Loading macro data...</div>
+      </div>
+    </div>
+
+  </div><!-- /row-2col -->
+
+  <!-- Row 4: News -->
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">📰 LIVE NEWS</span>
+      <span class="card-badge badge-rss">Reuters · CNBC · RSS</span>
+    </div>
+    <div class="news-grid" id="news-grid">
+      <div class="loading" style="grid-column:1/-1">Fetching news feeds...</div>
+    </div>
+  </div>
+
+</div><!-- /dashboard -->
+
+<!-- ── TradingView ────────────────────────────────────────────────────────── -->
+<script src="https://s3.tradingview.com/tv.js"></script>
+
+<script>
+/* ── Config ─────────────────────────────────────────────────────────────── */
+const TV_SYMBOLS = {{ tv_symbols | safe }};
+const REFRESH_INTERVAL = 60000;  // ms
+let countdown = 60;
+let tvWidget  = null;
+let tvActive  = 'AAPL';
+
+/* ── TradingView ─────────────────────────────────────────────────────────── */
+function initTV(symbol) {
+  const sym = TV_SYMBOLS[symbol] || `NASDAQ:${symbol}`;
+  if (tvWidget) {
+    try { tvWidget.chart().setSymbol(sym); } catch(e) { rebuildTV(sym); }
+    return;
+  }
+  rebuildTV(sym);
+}
+
+function rebuildTV(sym) {
+  document.getElementById('tv-container').innerHTML = '';
+  tvWidget = new TradingView.widget({
+    autosize:          true,
+    symbol:            sym,
+    interval:          '60',
+    timezone:          'America/New_York',
+    theme:             'dark',
+    style:             '1',
+    locale:            'en',
+    toolbar_bg:        '#0d0d1e',
+    enable_publishing: false,
+    hide_top_toolbar:  false,
+    save_image:        false,
+    container_id:      'tv-container',
+    allow_symbol_change: true,
+    studies:           ['RSI@tv-studiescript', 'MAExp@tv-studiescript'],
+  });
+}
+
+function buildTVControls(allTickers) {
+  const ctrl = document.getElementById('tv-controls');
+  ctrl.innerHTML = '';
+  allTickers.forEach(sym => {
+    const btn = document.createElement('button');
+    btn.className = 'tv-btn' + (sym === tvActive ? ' active' : '');
+    btn.textContent = sym;
+    btn.onclick = () => {
+      tvActive = sym;
+      ctrl.querySelectorAll('.tv-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      initTV(sym);
+      // highlight asset tile
+      document.querySelectorAll('.asset-tile').forEach(t => t.classList.remove('active'));
+      const tile = document.querySelector(`.asset-tile[data-sym="${sym}"]`);
+      if (tile) tile.classList.add('active');
+    };
+    ctrl.appendChild(btn);
+  });
+}
+
+/* ── Helpers ─────────────────────────────────────────────────────────────── */
+const fmt = n => {
+  if (n == null || isNaN(n)) return '—';
+  if (Math.abs(n) >= 1e12) return (n/1e12).toFixed(2) + 'T';
+  if (Math.abs(n) >= 1e9)  return (n/1e9).toFixed(2)  + 'B';
+  if (Math.abs(n) >= 1e6)  return (n/1e6).toFixed(2)  + 'M';
+  return n.toLocaleString();
+};
+const pctClass = p => p > 0 ? 'up' : p < 0 ? 'down' : '';
+const pctStr   = p => (p > 0 ? '+' : '') + p.toFixed(2) + '%';
+const clamp    = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+
+function fgColor(v) {
+  if (v <= 20)  return '#ff2244';
+  if (v <= 40)  return '#ff8800';
+  if (v <= 60)  return '#ffd700';
+  if (v <= 80)  return '#88ff44';
+  return '#00ff88';
+}
+
+function sparklineSVG(vals, color='#00f5ff', w=80, h=28) {
+  if (!vals || vals.length < 2) return '';
+  const max = Math.max(...vals, 1);
+  const min = Math.min(...vals);
+  const range = max - min || 1;
+  const pts = vals.map((v, i) => {
+    const x = (i / (vals.length - 1)) * w;
+    const y = h - ((v - min) / range) * (h - 2) - 1;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+    <circle cx="${((vals.length-1)/(vals.length-1))*w}" cy="${h - ((vals[vals.length-1]-min)/range)*(h-2)-1}" r="2.5" fill="${color}"/>
+  </svg>`;
+}
+
+/* ── Render: Ticker Tape ─────────────────────────────────────────────────── */
+function renderTape(stocks, crypto) {
+  const items = [];
+  for (const [sym, d] of Object.entries(stocks)) {
+    if (d.error && !d.price) continue;
+    items.push({sym, price: d.price, pct: d.pct});
+  }
+  for (const [sym, d] of Object.entries(crypto)) {
+    if (d.error) continue;
+    items.push({sym, price: d.price, pct: d.pct});
+  }
+  if (!items.length) return;
+  // duplicate for seamless loop
+  const html = [...items, ...items].map(it =>
+    `<div class="tape-item">
+      <span class="tape-sym">${it.sym}</span>
+      <span class="tape-price">$${it.price?.toLocaleString()}</span>
+      <span class="tape-chg ${pctClass(it.pct)}">${pctStr(it.pct)}</span>
+    </div>`
+  ).join('');
+  document.getElementById('tape-track').innerHTML = html;
+}
+
+/* ── Render: Stocks ──────────────────────────────────────────────────────── */
+function renderStocks(stocks) {
+  const grid = document.getElementById('stocks-grid');
+  if (!stocks || !Object.keys(stocks).length) { grid.innerHTML = '<div class="loading">No data</div>'; return; }
+  grid.innerHTML = Object.entries(stocks).map(([sym, d]) => `
+    <div class="asset-tile${sym===tvActive?' active':''}" data-sym="${sym}" onclick="selectAsset('${sym}')">
+      <div class="asset-sym">${sym}</div>
+      <div class="asset-price">$${(d.price||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="asset-pct ${pctClass(d.pct||0)}">${pctStr(d.pct||0)}</div>
+    </div>
+  `).join('');
+}
+
+/* ── Render: Crypto ──────────────────────────────────────────────────────── */
+function renderCrypto(crypto) {
+  const grid = document.getElementById('crypto-grid');
+  if (!crypto || crypto.error) { grid.innerHTML = `<div class="err">⚠ ${crypto?.error || 'No data'}</div>`; return; }
+  grid.innerHTML = Object.entries(crypto).map(([sym, d]) => `
+    <div class="asset-tile${sym===tvActive?' active':''}" data-sym="${sym}" onclick="selectAsset('${sym}')">
+      <div class="asset-sym">${sym}</div>
+      <div class="asset-price">$${(d.price||0).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}</div>
+      <div class="asset-pct ${pctClass(d.pct||0)}">${pctStr(d.pct||0)}</div>
+    </div>
+  `).join('');
+}
+
+function selectAsset(sym) {
+  tvActive = sym;
+  initTV(sym);
+  document.querySelectorAll('.asset-tile').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll(`.asset-tile[data-sym="${sym}"]`).forEach(t => t.classList.add('active'));
+  document.querySelectorAll('.tv-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent === sym);
+  });
+}
+
+/* ── Render: Fear & Greed ────────────────────────────────────────────────── */
+function renderFearGreed(fg) {
+  if (!fg || fg.value == null) return;
+  const v     = fg.value;
+  const angle = (v / 100 * 180) - 90;
+  document.getElementById('gauge-needle').style.transform = `rotate(${angle}deg)`;
+  const col = fgColor(v);
+  document.getElementById('fg-score').style.color = col;
+  document.getElementById('fg-score').textContent  = v;
+  document.getElementById('fg-label').textContent  = fg.label || '';
+  document.getElementById('fg-label').style.color  = col;
+
+  // History dots
+  const hist = (fg.history || []).slice(0, 14).reverse();
+  document.getElementById('fg-history').innerHTML = hist.map(h =>
+    `<div class="fg-dot" style="background:${fgColor(h.v)};opacity:.7" title="${h.v} — ${h.l}"></div>`
+  ).join('');
+}
+
+/* ── Render: WSB Sentiment ───────────────────────────────────────────────── */
+function renderWSB(reddit) {
+  const list = document.getElementById('wsb-list');
+  if (!reddit || reddit.error) { list.innerHTML = `<div class="err">⚠ ${reddit?.error||'No data'}</div>`; return; }
+  const entries = Object.entries(reddit).slice(0, 12);
+  if (!entries.length) { list.innerHTML = '<div class="loading">No mentions found</div>'; return; }
+
+  list.innerHTML = entries.map(([sym, d]) => {
+    const score   = d.score || 50;
+    const bull    = score >= 50;
+    const color   = score >= 65 ? '#00ff88' : score >= 50 ? '#88ff44' : score >= 35 ? '#ff8800' : '#ff2244';
+    const postsHtml = (d.posts||[]).map(p =>
+      `<div class="wsb-post-title"><a href="${p.url}" target="_blank">↗ ${p.title}</a> <span style="color:var(--gold)">[${p.score}]</span></div>`
+    ).join('');
+    return `
+      <div class="wsb-item" onclick="this.classList.toggle('open')">
+        <div class="wsb-header">
+          <span class="wsb-ticker">${sym}</span>
+          <span class="wsb-mentions">${d.mentions} mentions</span>
+        </div>
+        <div class="sentiment-bar">
+          <div class="sentiment-fill" style="width:${score}%;background:${color}"></div>
+        </div>
+        <div class="sentiment-labels">
+          <span style="color:var(--red)">BEARISH</span>
+          <span style="color:${color};font-weight:700">${score}% ${bull?'BULLISH':'BEARISH'}</span>
+          <span style="color:var(--green)">BULLISH</span>
+        </div>
+        <div class="wsb-posts">${postsHtml}</div>
+      </div>`;
+  }).join('');
+}
+
+/* ── Render: Google Trends ───────────────────────────────────────────────── */
+function renderTrends(trends) {
+  const list = document.getElementById('trends-list');
+  if (!trends || trends.error) { list.innerHTML = `<div class="err">⚠ ${trends?.error||'No data'}</div>`; return; }
+  const entries = Object.entries(trends);
+  if (!entries.length) { list.innerHTML = '<div class="loading">No trend data</div>'; return; }
+
+  list.innerHTML = entries.map(([kw, d]) => {
+    const color    = d.up ? '#00ff88' : '#ff2244';
+    const arrow    = d.up ? '▲' : '▼';
+    const spark    = sparklineSVG(d.sparkline, color);
+    return `
+      <div class="trend-item">
+        <span class="trend-kw" title="${kw}">${kw.replace(' stock','')}</span>
+        <span class="trend-val" style="color:${color}">${d.current}</span>
+        <span class="trend-spark">${spark}</span>
+        <span class="trend-pct ${d.up?'up':'down'}">${arrow} ${Math.abs(d.trend)}%</span>
+      </div>`;
+  }).join('');
+}
+
+/* ── Render: Macro ───────────────────────────────────────────────────────── */
+function renderMacro(macro) {
+  const grid = document.getElementById('macro-grid');
+  if (!macro || !Object.keys(macro).length) { grid.innerHTML = '<div class="loading">Loading...</div>'; return; }
+
+  const tiles = [];
+
+  if (macro.cpi) {
+    const yoy   = macro.cpi.yoy;
+    const col   = yoy > 3 ? 'var(--red)' : yoy > 2 ? 'var(--orange)' : 'var(--green)';
+    tiles.push({label:'CPI INFLATION', value: yoy != null ? yoy.toFixed(1)+'%' : macro.cpi.value.toFixed(1), color: col, sub: macro.cpi.period});
+  }
+  if (macro.unemployment) {
+    const v   = macro.unemployment.value;
+    const col = v > 5 ? 'var(--red)' : v > 4 ? 'var(--orange)' : 'var(--green)';
+    tiles.push({label:'UNEMPLOYMENT', value: v.toFixed(1)+'%', color: col, sub: macro.unemployment.period});
+  }
+  if (macro.treasury10y) {
+    const v   = macro.treasury10y.value;
+    const col = v > 5 ? 'var(--red)' : v > 4 ? 'var(--orange)' : 'var(--cyan)';
+    const pct = macro.treasury10y.pct;
+    tiles.push({label:'10Y TREASURY', value: v.toFixed(2)+'%', color: col, sub: `${pctStr(pct||0)} today`});
+  }
+  if (macro.treasury3m) {
+    tiles.push({label:'3M T-BILL', value: macro.treasury3m.value.toFixed(2)+'%', color:'var(--cyan)', sub:'Fed Rate Proxy'});
+  }
+  if (macro.vix) {
+    const v   = macro.vix.value;
+    const col = v > 30 ? 'var(--red)' : v > 20 ? 'var(--orange)' : 'var(--green)';
+    tiles.push({label:'VIX VOLATILITY', value: v.toFixed(1), color: col, sub:`${pctStr(macro.vix.pct||0)} today`});
+  }
+  if (macro.gold) {
+    tiles.push({label:'GOLD $/OZ', value:'$'+macro.gold.value.toLocaleString(), color:'var(--gold)', sub: pctStr(macro.gold.pct||0)});
+  }
+  if (macro.oil) {
+    const col = macro.oil.pct > 0 ? 'var(--orange)' : 'var(--cyan)';
+    tiles.push({label:'CRUDE OIL', value:'$'+macro.oil.value.toFixed(2), color: col, sub: pctStr(macro.oil.pct||0)});
+  }
+  if (macro.dxy) {
+    const col = macro.dxy.pct > 0 ? 'var(--green)' : 'var(--red)';
+    tiles.push({label:'US DOLLAR DXY', value: macro.dxy.value.toFixed(2), color: col, sub: pctStr(macro.dxy.pct||0)});
+  }
+
+  grid.innerHTML = tiles.map(t => `
+    <div class="macro-tile">
+      <div class="macro-label">${t.label}</div>
+      <div class="macro-value" style="color:${t.color}">${t.value}</div>
+      <div class="macro-sub">${t.sub||''}</div>
+    </div>
+  `).join('');
+}
+
+/* ── Render: News ─────────────────────────────────────────────────────────── */
+function renderNews(news) {
+  const grid = document.getElementById('news-grid');
+  if (!news || !news.length) { grid.innerHTML = '<div class="loading" style="grid-column:1/-1">No news available</div>'; return; }
+
+  grid.innerHTML = news.map(n => {
+    const cls = n.source.toLowerCase().includes('cnbc') ? 'src-cnbc' : 'src-reuters';
+    return `
+      <a class="news-card" href="${n.link}" target="_blank" rel="noopener">
+        <span class="news-source ${cls}">${n.source}</span>
+        <div class="news-title">${n.title}</div>
+        ${n.summary ? `<div class="news-summary">${n.summary}</div>` : ''}
+        <div class="news-pub">${n.published}</div>
+      </a>`;
+  }).join('');
+}
+
+/* ── Main Refresh ─────────────────────────────────────────────────────────── */
+let initialized = false;
+
+async function refresh() {
+  try {
+    const res  = await fetch('/api/data');
+    const data = await res.json();
+
+    renderTape(data.stocks || {}, data.crypto || {});
+    renderStocks(data.stocks);
+    renderCrypto(data.crypto);
+    renderFearGreed(data.fear_greed);
+    renderWSB(data.reddit);
+    renderTrends(data.trends);
+    renderMacro(data.macro);
+    renderNews(data.news);
+
+    if (!initialized) {
+      const allSyms = [
+        ...Object.keys(data.stocks || {}),
+        ...Object.keys(data.crypto || {}),
+      ];
+      buildTVControls(allSyms);
+      initTV(tvActive);
+      initialized = true;
+    }
+
+    const lu = data.last_updated;
+    document.getElementById('last-updated').textContent = lu
+      ? new Date(lu).toLocaleTimeString()
+      : '—';
+
+  } catch(e) {
+    console.error('Refresh error:', e);
+  }
+}
+
+/* ── Countdown Timer ──────────────────────────────────────────────────────── */
+function startCountdown() {
+  countdown = REFRESH_INTERVAL / 1000;
+  const el = document.getElementById('countdown');
+  const t  = setInterval(() => {
+    countdown--;
+    el.textContent = `REFRESH IN ${countdown}s`;
+    if (countdown <= 0) {
+      clearInterval(t);
+      refresh().then(startCountdown);
+    }
+  }, 1000);
+}
+
+/* ── Init ─────────────────────────────────────────────────────────────────── */
+refresh().then(startCountdown);
+</script>
+</body>
+</html>
