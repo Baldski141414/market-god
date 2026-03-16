@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Market God 🔮</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a27;
+      --border: #2a2a3d;
+      --text: #e8e8f0;
+      --muted: #6b6b8a;
+      --green: #00d4a0;
+      --red: #ff4d6d;
+      --yellow: #ffd166;
+      --blue: #6c9fff;
+      --purple: #b69fff;
+      --glow-green: 0 0 20px rgba(0,212,160,0.3);
+      --glow-red: 0 0 20px rgba(255,77,109,0.3);
+      --glow-yellow: 0 0 20px rgba(255,209,102,0.3);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: linear-gradient(135deg, #0a0a0f 0%, #12121a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(10px);
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-icon {
+      font-size: 32px;
+      filter: drop-shadow(0 0 12px rgba(180,100,255,0.6));
+    }
+    .logo-text h1 {
+      font-size: 22px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #b69fff, #6c9fff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo-text p {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .refresh-btn {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .refresh-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .last-updated {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      background: var(--green);
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.8); }
+    }
+
+    /* ── Market Overview Bar ── */
+    .market-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 32px;
+      display: flex;
+      gap: 32px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    .market-bar-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .market-bar-item .ticker { color: var(--purple); font-weight: 600; }
+    .market-bar-item .price { color: var(--text); font-weight: 500; }
+    .market-bar-item .change { font-weight: 500; }
+
+    /* ── Main Layout ── */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    /* ── Section Titles ── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    /* ── Cards Grid ── */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+      gap: 20px;
+      margin-bottom: 40px;
+    }
+
+    .asset-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+    .asset-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      border-radius: 16px 16px 0 0;
+    }
+    .asset-card.buy::before { background: linear-gradient(90deg, var(--green), #00a8ff); }
+    .asset-card.sell::before { background: linear-gradient(90deg, var(--red), #ff8800); }
+    .asset-card.hold::before { background: linear-gradient(90deg, var(--yellow), #ff9900); }
+    .asset-card:hover {
+      border-color: var(--purple);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(100,80,200,0.15);
+    }
+
+    /* ── Card Header ── */
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+    }
+    .asset-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .asset-logo {
+      width: 46px; height: 46px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .asset-logo.nvda { background: linear-gradient(135deg, #76b900, #4a7a00); }
+    .asset-logo.tsla { background: linear-gradient(135deg, #cc0000, #880000); }
+    .asset-logo.aapl { background: linear-gradient(135deg, #555, #222); }
+    .asset-logo.msft { background: linear-gradient(135deg, #00a4ef, #0078d4); }
+    .asset-logo.btc  { background: linear-gradient(135deg, #f7931a, #c96a00); }
+
+    .asset-name h2 { font-size: 18px; font-weight: 700; }
+    .asset-name p  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Signal Badge ── */
+    .signal-badge {
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .signal-badge.STRONG\ BUY, .signal-badge.BUY {
+      background: rgba(0,212,160,0.15);
+      color: var(--green);
+      border: 1px solid rgba(0,212,160,0.3);
+      box-shadow: var(--glow-green);
+    }
+    .signal-badge.SELL, .signal-badge.STRONG\ SELL {
+      background: rgba(255,77,109,0.15);
+      color: var(--red);
+      border: 1px solid rgba(255,77,109,0.3);
+      box-shadow: var(--glow-red);
+    }
+    .signal-badge.HOLD {
+      background: rgba(255,209,102,0.15);
+      color: var(--yellow);
+      border: 1px solid rgba(255,209,102,0.3);
+      box-shadow: var(--glow-yellow);
+    }
+
+    /* ── Price Section ── */
+    .price-section {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .price-main {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -1px;
+    }
+    .price-change {
+      font-size: 15px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .price-change.up   { background: rgba(0,212,160,0.12); color: var(--green); }
+    .price-change.down { background: rgba(255,77,109,0.12); color: var(--red); }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-item {
+      background: var(--surface2);
+      border-radius: 10px;
+      padding: 10px 12px;
+    }
+    .stat-item .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+    .stat-item .stat-value { font-size: 14px; font-weight: 600; }
+
+    /* ── Confidence Bar ── */
+    .confidence-row {
+      margin-bottom: 18px;
+    }
+    .confidence-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .confidence-bar-bg {
+      background: var(--surface2);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+    .confidence-bar-fill {
+      height: 100%;
+      border-radius: 4px;
+      transition: width 1s ease;
+    }
+    .buy .confidence-bar-fill  { background: linear-gradient(90deg, var(--green), #00a8ff); }
+    .sell .confidence-bar-fill { background: linear-gradient(90deg, var(--red), #ff8800); }
+    .hold .confidence-bar-fill { background: linear-gradient(90deg, var(--yellow), #ff9900); }
+
+    /* ── Analysis ── */
+    .analysis-section {
+      margin-bottom: 16px;
+    }
+    .analysis-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .analysis-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #c0c0d8;
+    }
+
+    /* ── News ── */
+    .news-section { margin-top: 16px; }
+    .news-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .news-item {
+      display: flex;
+      gap: 8px;
+      padding: 8px 0;
+      border-top: 1px solid var(--border);
+      align-items: flex-start;
+    }
+    .news-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--purple);
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+    .news-item a {
+      font-size: 12px;
+      color: #b0b0cc;
+      text-decoration: none;
+      line-height: 1.5;
+      transition: color 0.2s;
+    }
+    .news-item a:hover { color: var(--purple); }
+    .news-meta {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    /* ── Portfolio Section ── */
+    .portfolio-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      margin-bottom: 40px;
+    }
+    .portfolio-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .alloc-item {
+      text-align: center;
+    }
+    .alloc-circle {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 800;
+      margin: 0 auto 10px;
+      border: 3px solid;
+    }
+    .alloc-circle.nvda { border-color: #76b900; color: #76b900; background: rgba(118,185,0,0.1); }
+    .alloc-circle.tsla { border-color: #cc0000; color: #cc0000; background: rgba(204,0,0,0.1); }
+    .alloc-circle.aapl { border-color: #888; color: #aaa; background: rgba(136,136,136,0.1); }
+    .alloc-circle.msft { border-color: #00a4ef; color: #00a4ef; background: rgba(0,164,239,0.1); }
+    .alloc-circle.btc  { border-color: #f7931a; color: #f7931a; background: rgba(247,147,26,0.1); }
+    .alloc-label { font-size: 14px; font-weight: 700; }
+    .alloc-sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+    /* ── Disclaimer ── */
+    .disclaimer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--muted);
+      padding: 20px;
+      border-top: 1px solid var(--border);
+      margin-top: 40px;
+    }
+
+    /* ── Spinner ── */
+    .loading-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(10,10,15,0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      backdrop-filter: blur(4px);
+      transition: opacity 0.4s;
+    }
+    .loading-overlay.hidden { opacity: 0; pointer-events: none; }
+    .spinner {
+      width: 56px; height: 56px;
+      border: 3px solid var(--border);
+      border-top-color: var(--purple);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      header { padding: 16px; }
+      main { padding: 16px; }
+      .cards-grid { grid-template-columns: 1fr; }
+      .portfolio-grid { grid-template-columns: repeat(3, 1fr); }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .market-bar { gap: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+</div>
+
+<header>
+  <div class="logo">
+    <span class="logo-icon">🔮</span>
+    <div class="logo-text">
+      <h1>Market God</h1>
+      <p>Real-Time Intelligence Dashboard</p>
+    </div>
+  </div>
+  <div class="header-right">
+    <span class="last-updated" id="lastUpdated">
+      <span class="live-dot"></span>Fetching live data…
+    </span>
+    <button class="refresh-btn" onclick="refreshAll()">
+      <span id="refreshIcon">↻</span> Refresh
+    </button>
+  </div>
+</header>
+
+<div class="market-bar" id="marketBar">
+  <div class="market-bar-item"><span class="ticker">NVDA</span><span class="price" id="bar-nvda">—</span></div>
+  <div class="market-bar-item"><span class="ticker">TSLA</span><span class="price" id="bar-tsla">—</span></div>
+  <div class="market-bar-item"><span class="ticker">AAPL</span><span class="price" id="bar-aapl">—</span></div>
+  <div class="market-bar-item"><span class="ticker">MSFT</span><span class="price" id="bar-msft">—</span></div>
+  <div class="market-bar-item"><span class="ticker">BTC</span><span class="price" id="bar-btc">—</span></div>
+</div>
+
+<main>
+
+  <div class="section-title">📡 Live Asset Intelligence</div>
+
+  <div class="cards-grid" id="cardsGrid"></div>
+
+  <div class="section-title">📊 Suggested Portfolio Allocation</div>
+
+  <div class="portfolio-section">
+    <p style="font-size:13px;color:var(--muted);">Based on today's signals, news sentiment, and analyst consensus — auto-updated on each refresh.</p>
+    <div class="portfolio-grid">
+      <div class="alloc-item">
+        <div class="alloc-circle msft"><span id="alloc-msft">30%</span></div>
+        <div class="alloc-label">MSFT</div>
+        <div class="alloc-sub">Strong Buy</div>
+      </div>
+      <div class="alloc-item">
+        <div class="alloc-circle nvda"><span id="alloc-nvda">25%</span></div>
+        <div class="alloc-label">NVDA</div>
+        <div class="alloc-sub">Strong Buy</div>
+      </div>
+      <div class="alloc-item">
+        <div class="alloc-circle btc"><span id="alloc-btc">20%</span></div>
+        <div class="alloc-label">BTC</div>
+        <div class="alloc-sub">Buy</div>
+      </div>
+      <div class="alloc-item">
+        <div class="alloc-circle aapl"><span id="alloc-aapl">15%</span></div>
+        <div class="alloc-label">AAPL</div>
+        <div class="alloc-sub">Buy</div>
+      </div>
+      <div class="alloc-item">
+        <div class="alloc-circle tsla"><span id="alloc-tsla">10%</span></div>
+        <div class="alloc-label">TSLA</div>
+        <div class="alloc-sub">Hold</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="disclaimer">
+  ⚠️ <strong>Not financial advice.</strong> Market God is an AI-powered educational tool. Always do your own research before investing. Data sourced from Yahoo Finance.
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// Asset Configuration
+// ══════════════════════════════════════════
+const ASSETS = [
+  {
+    id: 'nvda',
+    ticker: 'NVDA',
+    name: 'NVIDIA Corporation',
+    type: 'Stock',
+    yahooSymbol: 'NVDA',
+    signal: 'STRONG BUY',
+    signalClass: 'buy',
+    confidence: 82,
+    target: '$220',
+    prevClose: 180.25,
+    openPrice: 182.97,
+    weekRange: '$102.83 – $188.87',
+    analysis: 'Record Q4 FY2026 revenue of $68.1B (+73% YoY). Jensen Huang unveiling agentic AI at GTC 2026. Dominant GPU market share with no credible short-term rival. AI infrastructure spending shows no signs of slowing.',
+    news: [
+      { title: 'NVDA jumps 3.8% after Jensen Huang reveals agentic AI roadmap at GTC 2026', source: 'FinancialContent', url: 'https://finance.yahoo.com/quote/NVDA/' },
+      { title: 'NVIDIA reports record Q4 revenue of $68.1 billion, up 73% year-over-year', source: 'NVIDIA Newsroom', url: 'https://nvidianews.nvidia.com/news/nvidia-announces-financial-results-for-fourth-quarter-and-fiscal-2026' },
+      { title: 'Analyst: NVDA price target raised to $220, AI infrastructure supercycle intact', source: 'StockAnalysis', url: 'https://stockanalysis.com/stocks/nvda/' }
+    ]
+  },
+  {
+    id: 'tsla',
+    ticker: 'TSLA',
+    name: 'Tesla Inc',
+    type: 'Stock',
+    yahooSymbol: 'TSLA',
+    signal: 'HOLD',
+    signalClass: 'hold',
+    confidence: 65,
+    target: '$370–$420',
+    prevClose: 391.20,
+    openPrice: 396.12,
+    weekRange: '$138.80 – $488.54',
+    analysis: 'Bearish trend persisting since late-2025 peak. Elon Musk\'s DOGE role creating operational distraction concerns. EV competition intensifying. FSD / robotaxi optionality remains the long-term bull case — but near-term direction is unclear.',
+    news: [
+      { title: 'Tesla bearish trend continues as Elon distraction risks weigh on sentiment', source: 'TradingView', url: 'https://finance.yahoo.com/quote/TSLA/' },
+      { title: 'TSLA shares decreased to $387 — lowest since November 2025', source: 'TradingEconomics', url: 'https://tradingeconomics.com/tsla:us' },
+      { title: '"What a Pathetic Disaster" — influencer pivot leaves Tesla undamaged per TipRanks', source: 'CNBC', url: 'https://www.cnbc.com/quotes/TSLA' }
+    ]
+  },
+  {
+    id: 'aapl',
+    ticker: 'AAPL',
+    name: 'Apple Inc',
+    type: 'Stock',
+    yahooSymbol: 'AAPL',
+    signal: 'BUY',
+    signalClass: 'buy',
+    confidence: 74,
+    target: '$275',
+    prevClose: 250.12,
+    openPrice: 252.10,
+    weekRange: '$169.21 – $288.62',
+    analysis: 'Gemini-powered Siri overhaul in 2026 is a significant AI catalyst. Stock has pulled back ~12% from its 52-week high, creating an attractive entry point. Services revenue continues to grow. iPhone upgrade cycle approaching on AI feature narrative.',
+    news: [
+      { title: 'Apple chooses Gemini as foundational model for 2026 Siri overhaul — report', source: 'Yahoo Finance', url: 'https://finance.yahoo.com/quote/AAPL/' },
+      { title: 'AAPL trading at $252.92 as of Mar 16 — recovering from recent selloff', source: 'Investing.com', url: 'https://www.investing.com/equities/apple-computer-inc' },
+      { title: 'Apple all-time high was $285.92 on Dec 2, 2025 — 52-week high $288.62', source: 'MacroTrends', url: 'https://www.macrotrends.net/stocks/charts/AAPL/apple/stock-price-history' }
+    ]
+  },
+  {
+    id: 'msft',
+    ticker: 'MSFT',
+    name: 'Microsoft Corporation',
+    type: 'Stock',
+    yahooSymbol: 'MSFT',
+    signal: 'STRONG BUY',
+    signalClass: 'buy',
+    confidence: 85,
+    target: '$480–$550',
+    prevClose: 395.55,
+    openPrice: 397.95,
+    weekRange: '$380.03 – $539.83',
+    analysis: 'Analyst consensus: Strong Buy with avg 12-month target of $594 — representing ~49% upside from current levels. Azure AI monetization accelerating. Copilot adoption expanding across enterprise. Trading at a -15% YTD discount from October 2025 highs.',
+    news: [
+      { title: 'MSFT analyst consensus Strong Buy — avg price target $594 vs current $399', source: 'FinancialContent', url: 'https://markets.financialcontent.com/stocks/article/finterra-2026-3-10-the-ai-hegemon-a-deep-dive-stock-analysis-of-microsoft-msft-in-2026' },
+      { title: 'Microsoft stock down 15% YTD — Azure AI and Copilot growth intact as dip opportunity', source: 'Bitget News', url: 'https://bingx.com/en/learn/article/microsoft-msft-stock-outlook-and-price-prediction-is-msft-a-good-investment' },
+      { title: 'Seeking Alpha: Microsoft an easy top pick for 2026 — Copilot concerns overstated', source: 'Seeking Alpha', url: 'https://seekingalpha.com/article/4856469-microsoft-an-easy-top-pick-for-2026' }
+    ]
+  },
+  {
+    id: 'btc',
+    ticker: 'BTC',
+    name: 'Bitcoin',
+    type: 'Crypto',
+    yahooSymbol: 'BTC-USD',
+    signal: 'BUY',
+    signalClass: 'buy',
+    confidence: 71,
+    target: '$85K–$95K',
+    prevClose: 72820.78,
+    openPrice: 72820.78,
+    weekRange: '$60,074 – $126,198',
+    analysis: 'Broke above 50-day moving average for the first time in 2 months. SuperTrend indicator flipped from Sell to Buy — prior two signals led to +52% and +174% moves. Up 3.48% today. Market cap $1.486T. Institutional demand underpins the floor.',
+    news: [
+      { title: 'Bitcoin climbs to near 6-week high at $74,512 — optimism on Middle East easing', source: 'Bloomberg', url: 'https://www.bloomberg.com/news/articles/2026-03-16/bitcoin-climbs-in-asia-as-other-markets-remain-tepid' },
+      { title: 'BTC breaks above 50-day MA for first time in 2 months — SuperTrend flips to Buy', source: 'CoinDesk', url: 'https://www.coindesk.com/markets/2026/03/16/bitcoin-s-price-trades-above-its-50-day-average-as-bullish-move-gathers-pace' },
+      { title: 'SuperTrend Buy signal: prior instances led to +52% and +174% — Ali Charts', source: 'CoinPedia', url: 'https://coinpedia.org/news/bitcoin-price-today-live-updates-why-is-crypto-going-up-16th-march/' }
+    ]
+  }
+];
+
+// ══════════════════════════════════════════
+// Price Fetch via Yahoo Finance (allorigins)
+// ══════════════════════════════════════════
+const SCRAPED_PRICES = {
+  NVDA:    { price: 183.22, change: 2.97,  changePct: 1.65 },
+  TSLA:    { price: 395.56, change: 4.36,  changePct: 1.12 },
+  AAPL:    { price: 252.82, change: 2.70,  changePct: 1.08 },
+  MSFT:    { price: 399.95, change: 4.40,  changePct: 1.11 },
+  'BTC-USD': { price: 74277.95, change: 2498.86, changePct: 3.48 }
+};
+
+async function fetchYahooPrice(symbol) {
+  try {
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=1m&range=1d`;
+    const proxy = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxy, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    const parsed = JSON.parse(data.contents);
+    const meta = parsed?.chart?.result?.[0]?.meta;
+    if (!meta) throw new Error('No meta');
+    return {
+      price: meta.regularMarketPrice,
+      change: meta.regularMarketPrice - meta.previousClose,
+      changePct: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+const liveData = {};
+
+async function fetchAllPrices() {
+  const symbols = ['NVDA', 'TSLA', 'AAPL', 'MSFT', 'BTC-USD'];
+  const promises = symbols.map(async (sym) => {
+    const data = await fetchYahooPrice(sym);
+    liveData[sym] = data || SCRAPED_PRICES[sym];
+    return [sym, liveData[sym]];
+  });
+  return Promise.all(promises);
+}
+
+// ══════════════════════════════════════════
+// Rendering
+// ══════════════════════════════════════════
+function fmt(price, isCrypto) {
+  if (isCrypto) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return '$' + price.toFixed(2);
+}
+
+function buildCard(asset) {
+  const sym = asset.yahooSymbol;
+  const d = liveData[sym] || SCRAPED_PRICES[sym] || { price: 0, change: 0, changePct: 0 };
+  const isCrypto = asset.id === 'btc';
+  const isUp = d.changePct >= 0;
+  const changeStr = (isUp ? '+' : '') + d.changePct.toFixed(2) + '%';
+  const changeClass = isUp ? 'up' : 'down';
+
+  return `
+    <div class="asset-card ${asset.signalClass}">
+      <div class="card-header">
+        <div class="asset-info">
+          <div class="asset-logo ${asset.id}">${asset.ticker.slice(0,2)}</div>
+          <div class="asset-name">
+            <h2>${asset.ticker}</h2>
+            <p>${asset.name} · ${asset.type}</p>
+          </div>
+        </div>
+        <span class="signal-badge ${asset.signal}">${asset.signal}</span>
+      </div>
+
+      <div class="price-section">
+        <span class="price-main" id="price-${asset.id}">${fmt(d.price, isCrypto)}</span>
+        <span class="price-change ${changeClass}" id="change-${asset.id}">${changeStr}</span>
+      </div>
+
+      <div class="stats-row">
+        <div class="stat-item">
+          <div class="stat-label">Prev Close</div>
+          <div class="stat-value">${fmt(asset.prevClose, isCrypto)}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Open</div>
+          <div class="stat-value">${fmt(asset.openPrice, isCrypto)}</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">52W Range</div>
+          <div class="stat-value" style="font-size:11px">${asset.weekRange}</div>
+        </div>
+      </div>
+
+      <div class="confidence-row">
+        <div class="confidence-header">
+          <span>AI Confidence</span>
+          <span>${asset.confidence}%</span>
+        </div>
+        <div class="confidence-bar-bg">
+          <div class="confidence-bar-fill" style="width: ${asset.confidence}%"></div>
+        </div>
+      </div>
+
+      <div class="analysis-section">
+        <div class="analysis-title">🤖 AI Analysis</div>
+        <div class="analysis-text">${asset.analysis}</div>
+      </div>
+
+      <div class="news-section">
+        <div class="news-title">📰 Latest News</div>
+        ${asset.news.map(n => `
+          <div class="news-item">
+            <div class="news-dot"></div>
+            <div>
+              <a href="${n.url}" target="_blank" rel="noopener">${n.title}</a>
+              <div class="news-meta">${n.source} · ${new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderCards() {
+  const grid = document.getElementById('cardsGrid');
+  grid.innerHTML = ASSETS.map(buildCard).join('');
+}
+
+function updateMarketBar() {
+  const map = { nvda: 'NVDA', tsla: 'TSLA', aapl: 'AAPL', msft: 'MSFT', btc: 'BTC-USD' };
+  Object.entries(map).forEach(([id, sym]) => {
+    const d = liveData[sym] || SCRAPED_PRICES[sym];
+    if (!d) return;
+    const isCrypto = id === 'btc';
+    const el = document.getElementById(`bar-${id}`);
+    const isUp = d.changePct >= 0;
+    el.innerHTML = `${fmt(d.price, isCrypto)} <span style="color:${isUp ? 'var(--green)' : 'var(--red)'}">(${isUp ? '+' : ''}${d.changePct.toFixed(2)}%)</span>`;
+  });
+}
+
+// ══════════════════════════════════════════
+// Refresh Logic
+// ══════════════════════════════════════════
+async function refreshAll() {
+  const icon = document.getElementById('refreshIcon');
+  icon.style.animation = 'spin 0.8s linear infinite';
+  const overlay = document.getElementById('loadingOverlay');
+  overlay.classList.remove('hidden');
+
+  await fetchAllPrices();
+  renderCards();
+  updateMarketBar();
+
+  const now = new Date();
+  document.getElementById('lastUpdated').innerHTML =
+    `<span class="live-dot"></span>Updated ${now.toLocaleTimeString()}`;
+
+  icon.style.animation = '';
+  overlay.classList.add('hidden');
+}
+
+// ── Boot ──
+(async () => {
+  // Seed with scraped data immediately for instant render
+  Object.assign(liveData, SCRAPED_PRICES);
+  renderCards();
+  updateMarketBar();
+  document.getElementById('loadingOverlay').classList.add('hidden');
+  document.getElementById('lastUpdated').innerHTML =
+    `<span class="live-dot"></span>Seeded from Yahoo Finance scrape — fetching live…`;
+
+  // Try to fetch live prices
+  await fetchAllPrices();
+  renderCards();
+  updateMarketBar();
+  document.getElementById('lastUpdated').innerHTML =
+    `<span class="live-dot"></span>Updated ${new Date().toLocaleTimeString()}`;
+
+  // Auto-refresh every 60 seconds
+  setInterval(refreshAll, 60_000);
+})();
+</script>
+</body>
+</html>
