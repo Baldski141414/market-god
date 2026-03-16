@@ -10,7 +10,7 @@ from datetime import datetime
 import feedparser
 import requests
 import yfinance as yf
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -42,6 +42,7 @@ NEWS_FEEDS = [
 _cache = {
     'stocks': {}, 'crypto': {}, 'fear_greed': {},
     'reddit': {}, 'trends': {}, 'macro': {}, 'news': [],
+    'signals': {},
     'last_updated': None,
 }
 _ttl: dict[str, float] = {}
@@ -286,6 +287,263 @@ def fetch_news() -> list:
     return articles[:24]
 
 
+# ── Paper Trading ─────────────────────────────────────────────────────────────
+PORTFOLIO_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'paper_trading.json')
+STARTING_CASH  = 100_000.0
+MAX_POSITIONS  = 12          # max simultaneous open positions
+POSITION_SIZE  = 0.08        # invest 8% of total portfolio per trade
+_portfolio_lock = threading.Lock()
+_paper_ttl      = 0.0
+PAPER_INTERVAL  = 65         # seconds between auto-trade checks
+
+
+def _default_portfolio() -> dict:
+    return {
+        'cash':           STARTING_CASH,
+        'positions':      {},   # {sym: {shares, avg_price, buy_time}}
+        'trades':         [],   # list of trade records
+        'spy_basis':      None, # SPY price when portfolio started
+        'spy_basis_time': None,
+        'created':        datetime.now().isoformat(),
+    }
+
+
+def load_portfolio() -> dict:
+    try:
+        if os.path.exists(PORTFOLIO_FILE):
+            with open(PORTFOLIO_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        pass
+    p = _default_portfolio()
+    save_portfolio(p)
+    return p
+
+
+def save_portfolio(p: dict):
+    try:
+        with open(PORTFOLIO_FILE, 'w') as f:
+            json.dump(p, f, indent=2)
+    except Exception as e:
+        print(f'[PORTFOLIO] save error: {e}')
+
+
+def _snapshot_prices() -> tuple[dict, dict]:
+    """Return (prices_dict, pcts_dict) from current cache without holding _lock."""
+    prices: dict = {}
+    pcts:   dict = {}
+    with _lock:
+        for sym, d in _cache.get('stocks', {}).items():
+            if isinstance(d, dict) and d.get('price'):
+                prices[sym] = d['price']
+                pcts[sym]   = d.get('pct', 0)
+        for sym, d in (_cache.get('crypto') or {}).items():
+            if isinstance(d, dict) and d.get('price') and sym != 'error':
+                prices[sym] = d['price']
+                pcts[sym]   = d.get('pct', 0)
+    return prices, pcts
+
+
+def calc_signal(sym: str, pct: float, fg_value: int, reddit: dict) -> dict:
+    """
+    Score each asset and return a signal label + supporting reasons.
+    Score range: -4 … +4
+      +2/-2  strong momentum (>=3% or <=-3%)
+      +1/-1  moderate momentum (>=1% or <=-1%)
+      +1/-1  Fear & Greed (>=60 greedy / <=40 fearful)
+      +1/-1  Reddit sentiment (score>=65 bull / <=35 bear, min 2 mentions)
+    """
+    score   = 0
+    reasons = []
+
+    # Price momentum
+    if pct >= 3:
+        score += 2; reasons.append(f'▲{pct:.1f}% momentum')
+    elif pct >= 1:
+        score += 1; reasons.append(f'▲{pct:.1f}% momentum')
+    elif pct <= -3:
+        score -= 2; reasons.append(f'▼{abs(pct):.1f}% drop')
+    elif pct <= -1:
+        score -= 1; reasons.append(f'▼{abs(pct):.1f}% drop')
+
+    # Fear & Greed macro filter
+    if fg_value >= 60:
+        score += 1; reasons.append(f'F&G={fg_value} greed')
+    elif fg_value <= 40:
+        score -= 1; reasons.append(f'F&G={fg_value} fear')
+
+    # WSB social sentiment
+    rd = reddit.get(sym, {}) if isinstance(reddit, dict) else {}
+    if isinstance(rd, dict) and rd.get('mentions', 0) >= 2:
+        rs = rd.get('score', 50)
+        if rs >= 65:
+            score += 1; reasons.append(f'WSB {rs:.0f}% bull')
+        elif rs <= 35:
+            score -= 1; reasons.append(f'WSB {rs:.0f}% bear')
+
+    if score >= 2:    label = 'Strong Buy'
+    elif score == 1:  label = 'Buy'
+    elif score == -1: label = 'Sell'
+    elif score <= -2: label = 'Strong Sell'
+    else:             label = 'Hold'
+
+    return {'label': label, 'score': score, 'reasons': reasons}
+
+
+def _portfolio_total(p: dict, prices: dict) -> float:
+    equity = sum(
+        pos['shares'] * prices.get(sym, pos['avg_price'])
+        for sym, pos in p['positions'].items()
+    )
+    return p['cash'] + equity
+
+
+def run_paper_trades():
+    """Check signals and auto-execute buy/sell orders. Called from refresh loop."""
+    prices, pcts = _snapshot_prices()
+    if not prices:
+        return
+
+    with _lock:
+        fg_value = _cache.get('fear_greed', {}).get('value', 50)
+        reddit   = _cache.get('reddit') or {}
+
+    signals_out: dict = {}
+
+    with _portfolio_lock:
+        p = load_portfolio()
+
+        # Seed SPY comparison baseline on first run
+        if p.get('spy_basis') is None and 'SPY' in prices:
+            p['spy_basis']      = prices['SPY']
+            p['spy_basis_time'] = datetime.now().isoformat()
+
+        total = _portfolio_total(p, prices)
+
+        for sym, price in prices.items():
+            pct    = pcts.get(sym, 0)
+            signal = calc_signal(sym, pct, fg_value, reddit)
+            signals_out[sym] = signal
+            label  = signal['label']
+            in_pos = sym in p['positions']
+
+            if label in ('Strong Buy', 'Buy') and not in_pos:
+                # Skip if at max positions or insufficient cash
+                if len(p['positions']) >= MAX_POSITIONS:
+                    continue
+                invest = min(total * POSITION_SIZE, p['cash'] * 0.90)
+                if invest < 50:
+                    continue
+                shares = invest / price
+                cost   = shares * price
+                p['cash'] -= cost
+                p['positions'][sym] = {
+                    'shares':    round(shares, 8),
+                    'avg_price': round(price,  8),
+                    'buy_time':  datetime.now().isoformat(),
+                }
+                p['trades'].append({
+                    'id':        len(p['trades']) + 1,
+                    'timestamp': datetime.now().isoformat(),
+                    'sym':       sym,
+                    'action':    'BUY',
+                    'price':     round(price, 4),
+                    'shares':    round(shares, 6),
+                    'value':     round(cost, 2),
+                    'signal':    label,
+                    'reasons':   signal['reasons'],
+                    'pnl':       None,
+                })
+
+            elif label in ('Sell', 'Strong Sell') and in_pos:
+                pos      = p['positions'][sym]
+                shares   = pos['shares']
+                proceeds = shares * price
+                pnl      = proceeds - shares * pos['avg_price']
+                p['cash'] += proceeds
+                del p['positions'][sym]
+                p['trades'].append({
+                    'id':        len(p['trades']) + 1,
+                    'timestamp': datetime.now().isoformat(),
+                    'sym':       sym,
+                    'action':    'SELL',
+                    'price':     round(price, 4),
+                    'shares':    round(shares, 6),
+                    'value':     round(proceeds, 2),
+                    'signal':    label,
+                    'reasons':   signal['reasons'],
+                    'pnl':       round(pnl, 2),
+                })
+
+        # Keep trade log bounded
+        p['trades'] = p['trades'][-500:]
+        save_portfolio(p)
+
+    # Publish signals to shared cache
+    with _lock:
+        _cache['signals'] = signals_out
+
+
+def get_portfolio_summary() -> dict:
+    prices, _ = _snapshot_prices()
+
+    with _portfolio_lock:
+        p = load_portfolio()
+
+    total   = _portfolio_total(p, prices)
+    pnl     = total - STARTING_CASH
+    pnl_pct = (pnl / STARTING_CASH) * 100
+
+    # Win rate from closed trades
+    closed   = [t for t in p['trades'] if t['action'] == 'SELL' and t.get('pnl') is not None]
+    wins     = sum(1 for t in closed if t['pnl'] > 0)
+    win_rate = round(wins / len(closed) * 100, 1) if closed else None
+
+    # vs SPY benchmark
+    spy_comparison = None
+    spy_curr = prices.get('SPY')
+    if spy_curr and p.get('spy_basis'):
+        spy_ret = (spy_curr - p['spy_basis']) / p['spy_basis'] * 100
+        spy_comparison = {
+            'spy_return': round(spy_ret, 2),
+            'our_return': round(pnl_pct, 2),
+            'vs_spy':     round(pnl_pct - spy_ret, 2),
+        }
+
+    # Enrich open positions
+    positions_detail = {}
+    for sym, pos in p['positions'].items():
+        curr_price = prices.get(sym, pos['avg_price'])
+        curr_value = pos['shares'] * curr_price
+        cost_basis = pos['shares'] * pos['avg_price']
+        pos_pnl    = curr_value - cost_basis
+        pos_pnl_pct = (pos_pnl / cost_basis * 100) if cost_basis else 0
+        positions_detail[sym] = {
+            'shares':     round(pos['shares'], 6),
+            'avg_price':  round(pos['avg_price'], 4),
+            'curr_price': round(curr_price, 4),
+            'curr_value': round(curr_value, 2),
+            'cost_basis': round(cost_basis, 2),
+            'pnl':        round(pos_pnl, 2),
+            'pnl_pct':    round(pos_pnl_pct, 2),
+            'buy_time':   pos.get('buy_time'),
+        }
+
+    return {
+        'cash':           round(p['cash'], 2),
+        'total_value':    round(total, 2),
+        'starting_value': STARTING_CASH,
+        'pnl':            round(pnl, 2),
+        'pnl_pct':        round(pnl_pct, 2),
+        'win_rate':       win_rate,
+        'trades_count':   len(p['trades']),
+        'spy_comparison': spy_comparison,
+        'positions':      positions_detail,
+        'trades':         list(reversed(p['trades']))[:50],  # newest first
+        'created':        p.get('created'),
+    }
+
+
 # ── Background Refresh Loop ───────────────────────────────────────────────────
 FETCHERS = {
     'stocks':     fetch_stocks,
@@ -299,6 +557,7 @@ FETCHERS = {
 
 
 def _refresh_loop():
+    global _paper_ttl
     while True:
         for key, fn in FETCHERS.items():
             if _should_update(key):
@@ -307,6 +566,17 @@ def _refresh_loop():
                     print(f'[{datetime.now().strftime("%H:%M:%S")}] ✓ {key}')
                 except Exception:
                     print(f'[ERROR] {key}:\n{traceback.format_exc()}')
+
+        # Run paper trades every PAPER_INTERVAL seconds once base data is ready
+        base_ready = all(_ttl.get(k, 0) > 0 for k in ('stocks', 'crypto', 'fear_greed'))
+        if base_ready and (time.time() - _paper_ttl > PAPER_INTERVAL):
+            try:
+                run_paper_trades()
+                _paper_ttl = time.time()
+                print(f'[{datetime.now().strftime("%H:%M:%S")}] ✓ paper_trades')
+            except Exception:
+                print(f'[ERROR] paper_trades:\n{traceback.format_exc()}')
+
         time.sleep(5)
 
 
@@ -323,6 +593,23 @@ def index():
 def api_data():
     with _lock:
         return jsonify({k: v for k, v in _cache.items()})
+
+
+@app.route('/api/portfolio')
+def api_portfolio():
+    return jsonify(get_portfolio_summary())
+
+
+@app.route('/api/paper/reset', methods=['POST'])
+def api_paper_reset():
+    with _portfolio_lock:
+        p = _default_portfolio()
+        save_portfolio(p)
+    with _lock:
+        _cache['signals'] = {}
+    global _paper_ttl
+    _paper_ttl = 0.0  # force trades to re-evaluate on next loop
+    return jsonify({'ok': True, 'message': 'Portfolio reset to $100,000'})
 
 
 if __name__ == '__main__':
