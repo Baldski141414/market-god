@@ -1,7 +1,7 @@
 """
-Coinbase Advanced Trade WebSocket feed (replaces geo-blocked Binance).
-Streams: ticker prices + market trades + level2 order book for BTC/ETH/SOL/XRP.
-Runs in two daemon threads — one for tickers/trades, one for order book depth.
+Kraken WebSocket feed (wss://ws.kraken.com).
+Streams: ticker prices for XBT/USD, ETH/USD, SOL/USD, XRP/USD.
+XBT is mapped to BTC internally. Order book depth for BTC + ETH.
 """
 import json
 import threading
@@ -10,39 +10,38 @@ import websocket
 from core.event_bus import bus, EVT_PRICE_TICK
 from core.data_store import store
 
-_WS_URL = 'wss://advanced-trade-api-ws.coinbase.com/ws/public'
+_WS_URL = 'wss://ws.kraken.com'
 
-_PRODUCTS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD']
-_DISPLAY  = {'BTC-USD': 'BTC', 'ETH-USD': 'ETH', 'SOL-USD': 'SOL', 'XRP-USD': 'XRP'}
+_PAIRS = ['XBT/USD', 'ETH/USD', 'SOL/USD', 'XRP/USD']
 
-# Depth products (limit to two to keep bandwidth manageable)
-_DEPTH_PRODUCTS = ['BTC-USD', 'ETH-USD']
+# Map Kraken pair names to internal symbols (XBT → BTC)
+_DISPLAY = {
+    'XBT/USD': 'BTC',
+    'ETH/USD': 'ETH',
+    'SOL/USD': 'SOL',
+    'XRP/USD': 'XRP',
+}
+
+_DEPTH_PAIRS = ['XBT/USD', 'ETH/USD']
 
 
-class CoinbaseTickerStream:
-    """Subscribes to ticker + market_trades channels for real-time prices."""
+class KrakenTickerStream:
+    """Subscribes to Kraken ticker channel for real-time prices."""
 
     def __init__(self):
         self._ws = None
         self._thread = None
 
     def start(self):
-        self._thread = threading.Thread(target=self._run, daemon=True, name='coinbase-ticker')
+        self._thread = threading.Thread(target=self._run, daemon=True, name='kraken-ticker')
         self._thread.start()
-        print('[Coinbase] Ticker stream starting...')
+        print('[Kraken] Ticker stream starting...')
 
     def _subscribe(self, ws):
-        msg = json.dumps({
-            'type': 'subscribe',
-            'product_ids': _PRODUCTS,
-            'channel': 'ticker',
-        })
-        ws.send(msg)
-        # Also subscribe to market_trades for individual trade ticks
         ws.send(json.dumps({
-            'type': 'subscribe',
-            'product_ids': _PRODUCTS,
-            'channel': 'market_trades',
+            'event': 'subscribe',
+            'pair': _PAIRS,
+            'subscription': {'name': 'ticker'},
         }))
 
     def _run(self):
@@ -57,78 +56,70 @@ class CoinbaseTickerStream:
                 )
                 self._ws.run_forever(ping_interval=30, ping_timeout=10)
             except Exception as e:
-                print(f'[Coinbase] Ticker stream error: {e}')
+                print(f'[Kraken] Ticker stream error: {e}')
             time.sleep(5)
 
     def _on_message(self, ws, raw):
         try:
             msg = json.loads(raw)
-            channel = msg.get('channel', '')
-            events  = msg.get('events', [])
 
-            for event in events:
-                if channel == 'ticker':
-                    for t in event.get('tickers', []):
-                        product = t.get('product_id', '')
-                        symbol  = _DISPLAY.get(product)
-                        if not symbol:
-                            continue
-                        price = float(t.get('price') or 0)
-                        vol   = float(t.get('volume_24_h') or 0)
-                        if price > 0:
-                            store.push_price(symbol, price, vol, time.time())
-                            bus.publish(EVT_PRICE_TICK, {
-                                'symbol': symbol,
-                                'price':  price,
-                                'volume': vol,
-                                'ts':     time.time(),
-                                'source': 'coinbase',
-                            })
+            # Skip event messages (heartbeat, subscriptionStatus, systemStatus)
+            if isinstance(msg, dict):
+                return
 
-                elif channel == 'market_trades':
-                    for trade in event.get('trades', []):
-                        product = trade.get('product_id', '')
-                        symbol  = _DISPLAY.get(product)
-                        if not symbol:
-                            continue
-                        price = float(trade.get('price') or 0)
-                        qty   = float(trade.get('size')  or 0)
-                        if price > 0:
-                            store.push_price(symbol, price, qty, time.time())
-                            bus.publish(EVT_PRICE_TICK, {
-                                'symbol': symbol,
-                                'price':  price,
-                                'volume': qty,
-                                'ts':     time.time(),
-                                'source': 'coinbase',
-                            })
+            # Ticker update is: [channelID, data, "ticker", "XBT/USD"]
+            if not isinstance(msg, list) or len(msg) < 4:
+                return
+            if msg[2] != 'ticker':
+                return
+
+            pair   = msg[3]
+            symbol = _DISPLAY.get(pair)
+            if not symbol:
+                return
+
+            data  = msg[1]
+            # 'c' = last trade closed: [price, lot_volume]
+            # 'v' = volume: [today, last_24h]
+            price = float(data['c'][0])
+            vol   = float(data['v'][1])  # 24h volume
+
+            if price > 0:
+                store.push_price(symbol, price, vol, time.time())
+                bus.publish(EVT_PRICE_TICK, {
+                    'symbol': symbol,
+                    'price':  price,
+                    'volume': vol,
+                    'ts':     time.time(),
+                    'source': 'kraken',
+                })
         except Exception as e:
-            print(f'[Coinbase] parse error: {e}')
+            print(f'[Kraken] parse error: {e}')
 
     def _on_error(self, ws, error):
-        print(f'[Coinbase] WS error: {error}')
+        print(f'[Kraken] WS error: {error}')
 
     def _on_close(self, ws, code, msg):
-        print(f'[Coinbase] WS closed: {code}')
+        print(f'[Kraken] WS closed: {code}')
 
 
-class CoinbaseDepthStream:
-    """Subscribes to level2 channel for order book depth (BTC + ETH)."""
+class KrakenDepthStream:
+    """Subscribes to Kraken book channel for order book depth (BTC + ETH)."""
 
     def __init__(self):
         self._thread = None
-        # Maintain local order book state
-        self._books = {p: {'bids': {}, 'asks': {}} for p in _DEPTH_PRODUCTS}
+        # Local order book: {pair: {'bids': {price_str: vol}, 'asks': {price_str: vol}}}
+        self._books = {p: {'bids': {}, 'asks': {}} for p in _DEPTH_PAIRS}
 
     def start(self):
-        self._thread = threading.Thread(target=self._run, daemon=True, name='coinbase-depth')
+        self._thread = threading.Thread(target=self._run, daemon=True, name='kraken-depth')
         self._thread.start()
 
     def _subscribe(self, ws):
         ws.send(json.dumps({
-            'type': 'subscribe',
-            'product_ids': _DEPTH_PRODUCTS,
-            'channel': 'level2',
+            'event': 'subscribe',
+            'pair': _DEPTH_PAIRS,
+            'subscription': {'name': 'book', 'depth': 20},
         }))
 
     def _run(self):
@@ -138,7 +129,7 @@ class CoinbaseDepthStream:
                     _WS_URL,
                     on_open=self._subscribe,
                     on_message=self._on_message,
-                    on_error=lambda ws, e: print(f'[Depth] error: {e}'),
+                    on_error=lambda ws, e: print(f'[Kraken Depth] error: {e}'),
                     on_close=lambda ws, c, m: None,
                 )
                 ws.run_forever(ping_interval=30, ping_timeout=10)
@@ -148,48 +139,71 @@ class CoinbaseDepthStream:
 
     def _on_message(self, ws, raw):
         try:
-            msg    = json.loads(raw)
-            events = msg.get('events', [])
+            msg = json.loads(raw)
 
-            for event in events:
-                product = event.get('product_id', '')
-                symbol  = _DISPLAY.get(product)
-                if not symbol or product not in self._books:
+            if isinstance(msg, dict):
+                return
+            if not isinstance(msg, list) or len(msg) < 4:
+                return
+
+            channel_name = msg[-2]  # e.g. "book-20"
+            pair         = msg[-1]  # e.g. "XBT/USD"
+
+            if not channel_name.startswith('book'):
+                return
+
+            symbol = _DISPLAY.get(pair)
+            if not symbol or pair not in self._books:
+                return
+
+            # Snapshot has 'bs'/'as'; incremental updates have 'b'/'a'
+            # msg[1] is always the data dict (sometimes msg[2] also if both sides update)
+            data_parts = msg[1:-2]  # everything between channelID and channel_name/pair
+
+            for data in data_parts:
+                if not isinstance(data, dict):
                     continue
 
-                evt_type = event.get('type', '')
-                updates  = event.get('updates', [])
+                # Snapshot keys: 'bs' (bids snapshot), 'as' (asks snapshot)
+                if 'bs' in data:
+                    self._books[pair]['bids'] = {
+                        entry[0]: float(entry[1]) for entry in data['bs']
+                    }
+                if 'as' in data:
+                    self._books[pair]['asks'] = {
+                        entry[0]: float(entry[1]) for entry in data['as']
+                    }
 
-                if evt_type == 'snapshot':
-                    # Reset book
-                    self._books[product] = {'bids': {}, 'asks': {}}
-
-                for upd in updates:
-                    side     = upd.get('side', '')        # 'bid' or 'offer'
-                    price_lv = upd.get('price_level', '')
-                    new_qty  = float(upd.get('new_quantity') or 0)
-                    book_key = 'bids' if side == 'bid' else 'asks'
-
-                    if new_qty == 0:
-                        self._books[product][book_key].pop(price_lv, None)
+                # Incremental update keys: 'b' (bids), 'a' (asks)
+                for entry in data.get('b', []):
+                    price_str, vol = entry[0], float(entry[1])
+                    if vol == 0:
+                        self._books[pair]['bids'].pop(price_str, None)
                     else:
-                        self._books[product][book_key][price_lv] = new_qty
+                        self._books[pair]['bids'][price_str] = vol
 
-                # Build sorted lists and push to store
-                bids = sorted(
-                    [[float(p), q] for p, q in self._books[product]['bids'].items()],
-                    key=lambda x: -x[0]
-                )[:20]
-                asks = sorted(
-                    [[float(p), q] for p, q in self._books[product]['asks'].items()],
-                    key=lambda x: x[0]
-                )[:20]
-                store.set_order_book(symbol, bids, asks)
+                for entry in data.get('a', []):
+                    price_str, vol = entry[0], float(entry[1])
+                    if vol == 0:
+                        self._books[pair]['asks'].pop(price_str, None)
+                    else:
+                        self._books[pair]['asks'][price_str] = vol
+
+            bids = sorted(
+                [[float(p), q] for p, q in self._books[pair]['bids'].items()],
+                key=lambda x: -x[0]
+            )[:20]
+            asks = sorted(
+                [[float(p), q] for p, q in self._books[pair]['asks'].items()],
+                key=lambda x: x[0]
+            )[:20]
+            store.set_order_book(symbol, bids, asks)
+
         except Exception:
             pass
 
 
 def start_binance():
-    """Kept for backwards compatibility — starts Coinbase streams."""
-    CoinbaseTickerStream().start()
-    CoinbaseDepthStream().start()
+    """Entry point — starts Kraken ticker and depth streams."""
+    KrakenTickerStream().start()
+    KrakenDepthStream().start()
