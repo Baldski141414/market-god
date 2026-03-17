@@ -225,11 +225,18 @@ def _try_buy(symbol: str, price: float, signal: dict, trigger: str = 'signal', t
             return
         if p['cash'] < 50:
             return
+        # Enforce 20% cash reserve — don't trade if cash is already at/below reserve
+        pv_check = _portfolio_value()
+        if p['cash'] <= pv_check * 0.20:
+            return
 
         pv      = _portfolio_value()
         pct     = CRYPTO_POSITION_PCT if is_crypto else STOCK_POSITION_PCT
         invest  = pv * pct
-        invest  = min(invest, p['cash'] * 0.95)
+        # Never use more than 80% of available cash total — keep 20% as reserve
+        cash_reserve = pv * 0.20
+        max_from_cash = max(0, p['cash'] - cash_reserve)
+        invest  = min(invest, max_from_cash)
         invest  = max(invest, 50)
         shares  = invest / price
 

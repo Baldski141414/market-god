@@ -1116,23 +1116,23 @@ function updatePortfolio(pt) {
   setV('pt-pnl',       formatMoney(p),  p  >= 0 ? 'pos' : 'neg');
   setV('pt-pnl-pct',   formatPct(pp),   pp >= 0 ? 'pos' : 'neg');
   setV('pt-winrate',   (pt.win_rate || 0).toFixed(1) + '%');
-  setV('pt-positions', Object.keys(pt.positions || {}).length);
+  setV('pt-positions', pt.num_positions || 0);
   setV('pt-vs-spy',    formatPct(vs),   vs >= 0 ? 'pos' : 'neg');
 
   const tbody = document.getElementById('positions-tbody');
-  const positions = pt.positions || {};
+  const positions = pt.positions || [];
   if (tbody) {
-    if (!Object.keys(positions).length) {
+    if (!positions.length) {
       tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">No open positions</td></tr>';
     } else {
-      tbody.innerHTML = Object.entries(positions).map(([sym, pos]) => {
-        const cur = (STATE.assets[sym] || {}).price || pos.entry;
-        const pnl = (cur - pos.entry) * pos.qty * (pos.side === 'LONG' ? 1 : -1);
+      tbody.innerHTML = positions.map(pos => {
+        const cur = pos.current_price;
+        const pnl = pos.pnl;
         return `<tr>
-          <td class="blue num">${sym}</td>
-          <td><span class="sig ${pos.side === 'LONG' ? 'BUY' : 'SELL'}">${pos.side}</span></td>
-          <td class="num">${pos.qty}</td>
-          <td class="muted num">${formatPrice(pos.entry)}</td>
+          <td class="blue num">${pos.symbol}</td>
+          <td><span class="sig BUY">LONG</span></td>
+          <td class="num">${pos.shares}</td>
+          <td class="muted num">${formatPrice(pos.avg_price)}</td>
           <td class="num">${formatPrice(cur)}</td>
           <td class="${pnl >= 0 ? 'pos' : 'neg'} num">${formatPrice(pnl)}</td>
         </tr>`;
@@ -1142,26 +1142,26 @@ function updatePortfolio(pt) {
 
   const hist = document.getElementById('trade-history');
   if (hist) {
-    const trades = (pt.trades || []).slice(-50).reverse();
+    const trades = pt.trades || [];
     if (!trades.length) {
       hist.innerHTML = '<div class="muted" style="text-align:center;padding:16px;font-size:11px;">No trades yet</div>';
     } else {
       hist.innerHTML = trades.map(t => `
-        <div class="trade-row ${t.side}">
+        <div class="trade-row ${t.action}">
           <span>
-            <span class="sig ${t.side === 'BUY' ? 'BUY' : 'SELL'}" style="font-size:9px;">${t.side}</span>
+            <span class="sig ${t.action === 'BUY' ? 'BUY' : 'SELL'}" style="font-size:9px;">${t.action}</span>
             <span class="blue" style="margin-left:6px;font-weight:600;">${t.symbol}</span>
           </span>
-          <span class="muted num" style="font-size:11px;">${formatPrice(t.price)} &times; ${t.qty}</span>
-          <span class="${(t.pnl || 0) >= 0 ? 'pos' : 'neg'} num" style="font-size:12px;">${t.pnl ? formatPrice(t.pnl) : ''}</span>
+          <span class="muted num" style="font-size:11px;">${formatPrice(t.price)} &times; ${t.shares}</span>
+          <span class="${(t.pnl || 0) >= 0 ? 'pos' : 'neg'} num" style="font-size:12px;">${t.pnl != null ? formatPrice(t.pnl) : ''}</span>
         </div>`).join('');
     }
   }
 }
 
 function confirmReset() {
-  if (!confirm('Reset paper trading portfolio to $100,000? This cannot be undone.')) return;
-  fetch('/api/reset', { method: 'POST' })
+  if (!confirm('Reset paper trading portfolio to $10,000? This cannot be undone.')) return;
+  fetch('/api/paper/reset', { method: 'POST' })
     .then(r => r.json())
     .then(d => updatePortfolio(d))
     .catch(() => {
