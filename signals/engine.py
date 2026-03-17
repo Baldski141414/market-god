@@ -2,83 +2,89 @@
 Signal Engine — pure math, zero API calls.
 Computes a 0-100 confidence score per asset in <10ms.
 Triggered by price tick events (event-driven, no polling).
+
+Crypto:  recalculates on every Kraken tick (no debounce), 24/7
+Stocks:  recalculates on every Yahoo tick (market hours only)
+All indicators are served from the incremental IndicatorCache (O(1) per tick).
 """
 import time
+import datetime
 import threading
+from zoneinfo import ZoneInfo
+
 from core.event_bus import bus, EVT_PRICE_TICK, EVT_SIGNAL_READY, EVT_ALERT
 from core.data_store import store
-from core.config import SIGNAL_ALERT_THRESHOLD, PRICE_HISTORY_LEN
-from signals.indicators import rsi, macd, bollinger, ema_crossover, momentum, volume_surge
+from core.config import (
+    SIGNAL_ALERT_THRESHOLD, CRYPTO_SYMBOLS, CRYPTO_WEIGHTS,
+)
+from signals.indicator_cache import indicator_cache
 from signals.weights import get_weights
 
-# Debounce: don't recalculate same symbol more often than this (ms)
-_MIN_RECALC_MS = 100
-_last_calc: dict[str, float] = {}
+_ET   = ZoneInfo('America/New_York')
 _lock = threading.Lock()
+_last_calc: dict[str, float] = {}
+
+# Stocks get a small safety floor so a burst of simultaneous Yahoo ticks
+# for the same symbol doesn't fire redundant calculations.
+_STOCK_MIN_RECALC_MS = 100
+
+
+def _is_market_hours() -> bool:
+    """Return True if NYSE is currently open."""
+    now = datetime.datetime.now(_ET)
+    if now.weekday() >= 5:          # Sat / Sun
+        return False
+    open_t  = now.replace(hour=9,  minute=30, second=0, microsecond=0)
+    close_t = now.replace(hour=16, minute=0,  second=0, microsecond=0)
+    return open_t <= now <= close_t
 
 
 def _component_score(symbol: str) -> dict[str, float]:
     """
     Compute each signal component as a value in [-1, +1].
-    Returns dict of component_name -> score.
+    Technical indicators come from the fast incremental cache (O(1)).
+    Auxiliary signals are looked up from the data store.
     """
-    prices  = store.get_close_series(symbol)
-    volumes = store.get_volume_series(symbol)
+    ind = indicator_cache.get(symbol)
     scores: dict[str, float] = {}
 
-    # ── Technical indicators ────────────────────────────────────────────────
-    # Momentum 5m (last 5 bars of 1m data = 5 min)
-    m5 = momentum(prices, 5)
-    scores['momentum_5m'] = m5 if m5 is not None else 0.0
+    # ── Technical indicators (from cache) ───────────────────────────────
+    scores['momentum_5m'] = ind.get('momentum_5m') or 0.0
+    scores['momentum_1h'] = ind.get('momentum_1h') or 0.0
 
-    # Momentum 1h (last 60 bars)
-    m60 = momentum(prices, 60)
-    scores['momentum_1h'] = m60 if m60 is not None else 0.0
-
-    # Volume surge
-    vs = volume_surge(volumes, 20)
+    vs = ind.get('vol_score')
     scores['volume_surge'] = vs if vs is not None else 0.0
 
-    # RSI — map 0-100 to -1 to +1 (overbought/oversold)
-    rsi_val = rsi(prices, 14)
+    rsi_val = ind.get('rsi')
     if rsi_val is not None:
         if rsi_val >= 70:
-            scores['rsi'] = -0.5 - (rsi_val - 70) / 60  # overbought = bearish
+            scores['rsi'] = -0.5 - (rsi_val - 70) / 60
         elif rsi_val <= 30:
-            scores['rsi'] = 0.5 + (30 - rsi_val) / 60   # oversold = bullish
+            scores['rsi'] = 0.5 + (30 - rsi_val) / 60
         else:
-            scores['rsi'] = (rsi_val - 50) / 50 * 0.4   # mild directional
+            scores['rsi'] = (rsi_val - 50) / 50 * 0.4
     else:
         scores['rsi'] = 0.0
 
-    # MACD
-    macd_line, sig_line, hist = macd(prices)
+    hist = ind.get('macd_hist')
     if hist is not None:
-        price_ref = prices[-1] if prices else 1
-        if price_ref != 0:
-            norm = hist / (price_ref * 0.01)  # normalize by 1% of price
-            scores['macd'] = max(-1.0, min(1.0, norm))
-        else:
-            scores['macd'] = 0.0
+        latest = store.get_latest(symbol)
+        price_ref = (latest or {}).get('price', 1) or 1
+        scores['macd'] = max(-1.0, min(1.0, hist / (price_ref * 0.01)))
     else:
         scores['macd'] = 0.0
 
-    # Bollinger band position
-    upper, mid, lower, pct_b = bollinger(prices)
+    pct_b = ind.get('boll_pct_b')
     if pct_b is not None:
-        # pct_b < 0.2 = oversold (+1), pct_b > 0.8 = overbought (-1)
         scores['bollinger'] = max(-1.0, min(1.0, (0.5 - pct_b) * 2))
     else:
         scores['bollinger'] = 0.0
 
-    # EMA 50/200 crossover
-    ema_score = ema_crossover(prices, 50, 200)
-    scores['ema_cross'] = ema_score if ema_score is not None else 0.0
+    scores['ema_cross'] = ind.get('ema_cross') or 0.0
 
-    # ── Auxiliary data ──────────────────────────────────────────────────────
-    # Options flow put/call ratio
+    # ── Auxiliary data ───────────────────────────────────────────────────
     opt = store.options.get(symbol, {})
-    pc = opt.get('pc_ratio', 1.0)
+    pc  = opt.get('pc_ratio', 1.0)
     if pc < 0.7:
         scores['options_flow'] = min(1.0, (1.0 - pc) / 0.6)
     elif pc > 1.3:
@@ -86,40 +92,27 @@ def _component_score(symbol: str) -> dict[str, float]:
     else:
         scores['options_flow'] = 0.0
 
-    # Fear & Greed (macro sentiment, same for all assets)
     fg = store.fear_greed.get('value', 50)
-    scores['fear_greed'] = (fg - 50) / 50  # -1 to +1
+    scores['fear_greed'] = (fg - 50) / 50
 
-    # Reddit sentiment for this symbol
     reddit = store.reddit.get(symbol, {})
-    bull_pct = reddit.get('bull_pct', 50)
-    scores['reddit'] = (bull_pct - 50) / 50  # -1 to +1
+    scores['reddit'] = (reddit.get('bull_pct', 50) - 50) / 50
 
-    # Whale movements (BTC/ETH boost)
-    whale_score = 0.0
-    whales = store.whale
-    sym_whales = [w for w in whales if w.get('symbol') == symbol]
-    if sym_whales:
-        # Recent large whale buys = slight positive
-        whale_score = min(1.0, len(sym_whales) * 0.25)
-    scores['whale'] = whale_score
+    sym_whales = [w for w in store.whale if w.get('symbol') == symbol]
+    scores['whale'] = min(1.0, len(sym_whales) * 0.25)
 
-    # Congress + insider combined
-    insider = store.insider.get(symbol, {})
-    buys = insider.get('buys', 0)
-    sells = insider.get('sells', 0)
-    net_insider = (buys - sells) / max(buys + sells, 1)
+    insider   = store.insider.get(symbol, {})
+    buys      = insider.get('buys', 0)
+    sells     = insider.get('sells', 0)
+    net_ins   = (buys - sells) / max(buys + sells, 1)
+    congress  = store.congress
+    cb = sum(1 for t in congress if t.get('ticker') == symbol and 'purchase' in t.get('type','').lower())
+    cs = sum(1 for t in congress if t.get('ticker') == symbol and 'sale'     in t.get('type','').lower())
+    net_cong  = (cb - cs) / max(cb + cs, 1)
+    scores['congress_insider'] = max(-1.0, min(1.0, (net_ins + net_cong) / 2))
 
-    congress = store.congress
-    cong_buys = sum(1 for t in congress if t.get('ticker') == symbol and 'purchase' in t.get('type','').lower())
-    cong_sells = sum(1 for t in congress if t.get('ticker') == symbol and 'sale' in t.get('type','').lower())
-    net_cong = (cong_buys - cong_sells) / max(cong_buys + cong_sells, 1)
-
-    scores['congress_insider'] = max(-1.0, min(1.0, (net_insider + net_cong) / 2))
-
-    # Macro regime adjustment
     regime = store.macro.get('regime', 'NEUTRAL')
-    vix = store.macro.get('vix', 20)
+    vix    = store.macro.get('vix', 20)
     if regime == 'RISK_ON':
         scores['macro'] = 0.5
     elif regime == 'RISK_OFF':
@@ -137,13 +130,11 @@ def calculate_signal(symbol: str) -> dict:
     Compute full signal for a symbol.
     Returns {score: 0-100, signal: str, components: dict, ts: float}
     """
-    weights = get_weights()
+    is_crypto = symbol in CRYPTO_SYMBOLS
+    weights   = CRYPTO_WEIGHTS if is_crypto else get_weights()
     components = _component_score(symbol)
 
-    # Weighted sum: each component is -1 to +1
-    raw = sum(components.get(k, 0) * w for k, w in weights.items())
-
-    # Map -1..+1 → 0..100
+    raw   = sum(components.get(k, 0) * w for k, w in weights.items())
     score = round(max(0, min(100, raw * 50 + 50)), 1)
 
     if score >= 78:
@@ -158,12 +149,12 @@ def calculate_signal(symbol: str) -> dict:
         signal = 'Strong Sell'
 
     return {
-        'symbol': symbol,
-        'score': score,
-        'signal': signal,
+        'symbol':     symbol,
+        'score':      score,
+        'signal':     signal,
         'components': {k: round(v, 3) for k, v in components.items()},
-        'rsi': rsi(store.get_close_series(symbol), 14),
-        'ts': time.time(),
+        'rsi':        indicator_cache.get(symbol).get('rsi'),
+        'ts':         time.time(),
     }
 
 
@@ -173,24 +164,39 @@ def _on_price_tick(data: dict):
     if not symbol:
         return
 
+    price  = data.get('price', 0)
+    volume = data.get('volume', 0)
+
+    # Always keep the indicator cache current (O(1) per tick)
+    if price > 0:
+        indicator_cache.update(symbol, price, volume)
+
+    is_crypto = symbol in CRYPTO_SYMBOLS
+
+    # Stocks only recalculate during market hours
+    if not is_crypto and not _is_market_hours():
+        return
+
     now = time.time() * 1000  # ms
+    # Crypto: no debounce — every Kraken tick fires a signal update
+    # Stocks: 100ms safety floor (Yahoo already throttles to 30s)
+    min_ms = 0 if is_crypto else _STOCK_MIN_RECALC_MS
+
     with _lock:
         last = _last_calc.get(symbol, 0)
-        if now - last < _MIN_RECALC_MS:
+        if now - last < min_ms:
             return
         _last_calc[symbol] = now
 
-    # Calculate signal (this must be fast)
     result = calculate_signal(symbol)
     store.set_signal(symbol, result)
     bus.publish(EVT_SIGNAL_READY, result)
 
-    # Alert if threshold crossed
     if result['score'] >= SIGNAL_ALERT_THRESHOLD:
         bus.publish(EVT_ALERT, {
-            'symbol': symbol,
-            'score': result['score'],
-            'signal': result['signal'],
+            'symbol':  symbol,
+            'score':   result['score'],
+            'signal':  result['signal'],
             'message': f"{symbol} hit {result['score']:.0f} confidence — {result['signal']}",
         })
 
@@ -198,4 +204,4 @@ def _on_price_tick(data: dict):
 def start_signal_engine():
     """Subscribe to price ticks and start processing."""
     bus.subscribe(EVT_PRICE_TICK, _on_price_tick)
-    print('[SignalEngine] started — event-driven mode')
+    print('[SignalEngine] started — event-driven, incremental cache, crypto real-time')

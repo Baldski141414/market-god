@@ -1,26 +1,34 @@
 """
 Opportunity Ranker — ranks all assets by signal score every 30 seconds.
 Publishes top-10 opportunities via event bus.
-Also fires EVT_SIGNAL_READY for every asset it scans so the paper trader
-sees a full-universe sweep across all 134+ assets on every cycle.
+
+Crypto signals are kept fresh by real-time Kraken ticks, so the ranker
+only re-scans stock symbols.  Crypto is included in the final ranking
+via its cached signal values.
 """
 import threading
 import time
 from core.event_bus import bus, EVT_RANK_UPDATE, EVT_SIGNAL_READY
 from core.data_store import store
-from core.config import RANK_REFRESH_SECS, TOP_OPPORTUNITIES
+from core.config import RANK_REFRESH_SECS, TOP_OPPORTUNITIES, CRYPTO_SYMBOLS
 from signals.engine import calculate_signal
 
 
 def _rank_loop():
     while True:
         try:
-            # Recompute signals for ALL symbols with price data on every sweep.
-            # This ensures the paper trader sees a full 134+ asset scan every
-            # RANK_REFRESH_SECS, not just assets that happened to get a price tick.
-            prices = store.latest_prices
+            prices     = store.latest_prices
             all_signals: dict = {}
+
             for sym in list(prices.keys()):
+                if sym in CRYPTO_SYMBOLS:
+                    # Crypto: use cached signal — real-time ticks keep it fresh
+                    cached = store.get_signal(sym)
+                    if cached:
+                        all_signals[sym] = cached
+                    continue
+                # Stocks: recompute and publish EVT_SIGNAL_READY so paper trader
+                # evaluates any symbols that may have missed their price tick.
                 try:
                     result = calculate_signal(sym)
                     store.set_signal(sym, result)
@@ -29,29 +37,25 @@ def _rank_loop():
                 except Exception:
                     pass
 
-            # Sort by score descending
             ranked = sorted(
                 [v for v in all_signals.values() if v.get('score') is not None],
                 key=lambda x: x['score'],
                 reverse=True,
             )
 
-            top = ranked[:TOP_OPPORTUNITIES]
-
-            # Enrich with latest price data
             opportunities = []
-            for item in top:
-                sym = item['symbol']
+            for item in ranked[:TOP_OPPORTUNITIES]:
+                sym    = item['symbol']
                 latest = store.get_latest(sym) or {}
                 opportunities.append({
-                    'symbol': sym,
-                    'score': item['score'],
-                    'signal': item['signal'],
-                    'price': latest.get('price', 0),
+                    'symbol':     sym,
+                    'score':      item['score'],
+                    'signal':     item['signal'],
+                    'price':      latest.get('price', 0),
                     'change_pct': latest.get('change_pct', 0),
                     'components': item.get('components', {}),
-                    'rsi': item.get('rsi'),
-                    'ts': item.get('ts', 0),
+                    'rsi':        item.get('rsi'),
+                    'ts':         item.get('ts', 0),
                 })
 
             store.set_opportunities(opportunities)
@@ -66,4 +70,4 @@ def _rank_loop():
 def start_ranker():
     t = threading.Thread(target=_rank_loop, daemon=True, name='ranker')
     t.start()
-    print('[Ranker] started')
+    print('[Ranker] started — stocks rescanned every 30s, crypto uses real-time cache')
