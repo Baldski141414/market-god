@@ -674,6 +674,11 @@ function formatPrice(p) {
   return '$' + p.toFixed(6);
 }
 
+function formatMoney(p) {
+  if (p === undefined || p === null || isNaN(p)) return '--';
+  return '$' + p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function formatPct(p) {
   if (p === undefined || p === null || isNaN(p)) return '--';
   return (p >= 0 ? '+' : '') + p.toFixed(2) + '%';
@@ -742,7 +747,7 @@ function buildOpportunities() {
         <span class="opp-sym">${sym}</span>
         <span class="opp-rank">#${i + 1}</span>
       </div>
-      <div class="opp-score ${scoreClass(sc)}">${sc}</div>
+      <div class="opp-score ${scoreClass(sc)}">${Math.round(sc)}</div>
       <span class="sig ${sig}">${sig.replace('_', ' ')}</span>
     </div>`;
   }).join('');
@@ -860,9 +865,9 @@ function updatePortfolio(pt) {
     e.textContent = val;
     if (cls) e.className = 'stat-value ' + cls;
   };
-  setV('pt-cash',      formatPrice(pt.cash   || 0));
-  setV('pt-equity',    formatPrice(pt.equity || 0));
-  setV('pt-pnl',       formatPrice(p),  p  >= 0 ? 'pos' : 'neg');
+  setV('pt-cash',      formatMoney(pt.cash   || 0));
+  setV('pt-equity',    formatMoney(pt.equity || 0));
+  setV('pt-pnl',       formatMoney(p),  p  >= 0 ? 'pos' : 'neg');
   setV('pt-pnl-pct',   formatPct(pp),   pp >= 0 ? 'pos' : 'neg');
   setV('pt-winrate',   (pt.win_rate || 0).toFixed(1) + '%');
   setV('pt-positions', Object.keys(pt.positions || {}).length);
@@ -1064,16 +1069,21 @@ function generateCandleData(basePrice, n) {
   n = n || 120;
   const data = [];
   const now  = Math.floor(Date.now() / 1000);
-  let price  = basePrice * (0.88 + Math.random() * 0.08);
-  for (let i = n; i >= 0; i--) {
-    const time   = now - i * 300;
-    const open   = price;
-    const change = (Math.random() - 0.48) * basePrice * 0.008;
-    const close  = Math.max(open + change, 0.0001);
-    const high   = Math.max(open, close) * (1 + Math.random() * 0.004);
-    const low    = Math.min(open, close) * (1 - Math.random() * 0.004);
+  // Walk backwards from current price so chart ends at the live price
+  const closes = [basePrice];
+  for (let i = 1; i <= n; i++) {
+    const prev   = closes[closes.length - 1];
+    const change = (Math.random() - 0.5) * basePrice * 0.008;
+    closes.push(Math.max(prev + change, 0.0001));
+  }
+  closes.reverse(); // oldest first, last entry = basePrice (current price)
+  for (let i = 0; i <= n; i++) {
+    const time  = now - (n - i) * 300;
+    const close = closes[i];
+    const open  = i > 0 ? closes[i - 1] : close;
+    const high  = Math.max(open, close) * (1 + Math.random() * 0.004);
+    const low   = Math.min(open, close) * (1 - Math.random() * 0.004);
     data.push({ time, open, high, low, close });
-    price = close;
   }
   return data;
 }
