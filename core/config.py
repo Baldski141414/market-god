@@ -33,36 +33,57 @@ PRICE_HISTORY_LEN = 500
 
 # Signal weights — must sum to 1.0
 DEFAULT_WEIGHTS = {
-    'momentum_5m':      0.08,
-    'momentum_1h':      0.10,
-    'volume_surge':     0.12,
-    'rsi':              0.08,
-    'macd':             0.10,
-    'bollinger':        0.07,
-    'ema_cross':        0.10,
-    'options_flow':     0.10,
-    'fear_greed':       0.05,
-    'reddit':           0.04,
-    'whale':            0.06,
-    'congress_insider': 0.06,
-    'macro':            0.04,
+    # Technical (0.50)
+    'momentum_5m':      0.06,
+    'momentum_1h':      0.08,
+    'volume_surge':     0.09,
+    'rsi':              0.06,
+    'macd':             0.08,
+    'bollinger':        0.05,
+    'ema_cross':        0.08,
+    # Auxiliary (0.26)
+    'options_flow':     0.08,
+    'fear_greed':       0.04,
+    'reddit':           0.03,
+    'whale':            0.04,
+    'congress_insider': 0.04,
+    'macro':            0.03,
+    # Alternative data (0.24) — new
+    'dark_pool':        0.05,
+    'prediction_market':0.05,
+    'supply_chain':     0.04,
+    'earnings_nlp':     0.04,
+    'shipping_bdi':     0.03,
+    'geopolitical':     0.02,
+    'patent':           0.01,
 }
 
-# Crypto-optimized weights: momentum 25%, volume 20%, order flow 15%, whale 15%, RSI 10%, MACD 10%, F&G 5%
+# Crypto-optimized weights (sum = 1.0)
 CRYPTO_WEIGHTS = {
-    'momentum_5m':      0.125,
-    'momentum_1h':      0.125,
-    'volume_surge':     0.20,
-    'rsi':              0.10,
-    'macd':             0.10,
+    # Technical (0.58)
+    'momentum_5m':      0.12,
+    'momentum_1h':      0.12,
+    'volume_surge':     0.17,
+    'rsi':              0.09,
+    'macd':             0.09,
     'bollinger':        0.0,
     'ema_cross':        0.0,
-    'options_flow':     0.15,
-    'fear_greed':       0.05,
+    # Auxiliary (0.28)
+    'options_flow':     0.12,
+    'fear_greed':       0.04,
     'reddit':           0.0,
-    'whale':            0.15,
+    'whale':            0.12,
     'congress_insider': 0.0,
     'macro':            0.0,
+    # Alternative data for crypto (0.13)
+    'dark_pool':        0.0,
+    'prediction_market':0.05,
+    'supply_chain':     0.0,
+    'earnings_nlp':     0.0,
+    'shipping_bdi':     0.0,
+    'geopolitical':     0.04,
+    'patent':           0.0,
+    'mempool':          0.04,   # crypto-only: Bitcoin mempool activity
 }
 
 # Stock paper trading

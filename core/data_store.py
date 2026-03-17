@@ -34,6 +34,20 @@ class DataStore:
         self.insider: dict = {}
         self.coingecko: list = []
 
+        # Alternative data sources (new)
+        self.altdata: dict = {
+            'gdelt':              {},   # geopolitical risk by region
+            'patents':            {},   # patent filings per ticker
+            'shipping':           {},   # BDI + freight index
+            'mempool':            {},   # Bitcoin mempool stats
+            'prediction_markets': {},   # Polymarket odds
+            'dark_pool':          {},   # FINRA short/dark pool per ticker
+            'supply_chain':       {},   # supply chain stress per ticker
+            'earnings_nlp':       {},   # NLP sentiment on 8-K filings
+            'contagion':          {},   # cross-market chain predictions
+            'alerts':             [],   # alternative data alert events
+        }
+
         # Order book: symbol -> {bids: [[price,qty],...], asks: [[price,qty],...]}
         self.order_book: dict[str, dict] = {}
 
@@ -169,6 +183,7 @@ class DataStore:
                 'coingecko': list(self.coingecko),
                 'order_book': dict(self.order_book),
                 'weights': dict(self.weights),
+                'altdata': dict(self.altdata),
                 'ts': time.time(),
             }
 

@@ -138,6 +138,24 @@ def create_app():
         ob = store.order_book.get(symbol, {'bids': [], 'asks': []})
         return jsonify(ob)
 
+    @app.route('/api/altdata')
+    def api_altdata():
+        """Return full alternative data snapshot."""
+        with store._lock:
+            return jsonify({
+                'gdelt':              dict(store.altdata.get('gdelt') or {}),
+                'patents':            dict(store.altdata.get('patents') or {}),
+                'shipping':           dict(store.altdata.get('shipping') or {}),
+                'mempool':            dict(store.altdata.get('mempool') or {}),
+                'prediction_markets': dict(store.altdata.get('prediction_markets') or {}),
+                'dark_pool':          dict(store.altdata.get('dark_pool') or {}),
+                'supply_chain':       dict(store.altdata.get('supply_chain') or {}),
+                'earnings_nlp':       dict(store.altdata.get('earnings_nlp') or {}),
+                'contagion':          dict(store.altdata.get('contagion') or {}),
+                'alerts':             list(store.altdata.get('alerts') or []),
+                'ts':                 time.time(),
+            })
+
     # ── WebSocket bridge — publish store events to all clients ─────────────
     def _push_signal(data):
         try:

@@ -122,6 +122,58 @@ def _component_score(symbol: str) -> dict[str, float]:
     else:
         scores['macro'] = max(-1.0, min(1.0, (20 - vix) / 20))
 
+    # ── Alternative Data (from altdata store) ───────────────────
+    alt = store.altdata
+
+    # Geopolitical risk (GDELT)
+    geo = alt.get('gdelt') or {}
+    geo_risk = geo.get('global_risk', 50)
+    ticker_risks = geo.get('affected_tickers') or {}
+    if symbol in ticker_risks:
+        # Symbol is specifically flagged — use max regional risk
+        max_regional = max((r['risk'] for r in ticker_risks[symbol]), default=geo_risk)
+        scores['geopolitical'] = -(max_regional - 50) / 50
+    else:
+        scores['geopolitical'] = -(geo_risk - 50) / 50
+
+    # Patent activity (USPTO/PatentsView)
+    patents = alt.get('patents') or {}
+    pat = patents.get(symbol) or {}
+    scores['patent'] = float(pat.get('signal', 0.0))
+
+    # Shipping / Baltic Dry Index (FRED)
+    shipping = alt.get('shipping') or {}
+    scores['shipping_bdi'] = float(shipping.get('macro_signal', 0.0))
+
+    # Prediction markets (Polymarket)
+    pred_mkts = alt.get('prediction_markets') or {}
+    by_ticker = pred_mkts.get('by_ticker') or {}
+    if symbol in by_ticker:
+        scores['prediction_market'] = float(by_ticker[symbol].get('signal', 0.0))
+    else:
+        # Use fed cut probability as macro signal when no direct ticker match
+        fed_prob = pred_mkts.get('fed_cut_prob', 50.0)
+        scores['prediction_market'] = (fed_prob - 50) / 100  # small default
+
+    # Dark pool activity (FINRA RegSho)
+    dark_pool = alt.get('dark_pool') or {}
+    dp = dark_pool.get(symbol) or {}
+    scores['dark_pool'] = float(dp.get('signal', 0.0))
+
+    # Supply chain stress (SEC EDGAR)
+    supply_chain = alt.get('supply_chain') or {}
+    sc = supply_chain.get(symbol) or {}
+    scores['supply_chain'] = float(sc.get('signal', 0.0))
+
+    # Earnings call NLP (SEC 8-K)
+    enlp = alt.get('earnings_nlp') or {}
+    en = enlp.get(symbol) or {}
+    scores['earnings_nlp'] = float(en.get('sentiment', 0.0))
+
+    # Mempool (Bitcoin only — weight=0 for stocks)
+    mp = alt.get('mempool') or {}
+    scores['mempool'] = float(mp.get('signal', 0.0))
+
     return scores
 
 

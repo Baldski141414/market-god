@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Market God 5.0</title>
+  <title>Market God 6.0</title>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     :root {
@@ -317,6 +317,69 @@
     .trend-vol  { font-family: 'SF Mono', monospace; font-size: 22px; font-weight: 700; color: var(--blue); }
     .trend-chg  { font-family: 'SF Mono', monospace; font-size: 11px; margin-top: 2px; }
 
+    /* ── ALTERNATIVE DATA ─────────────────────────────── */
+    :root { --orange: #ff8800; --purple: #9966ff; }
+    #altdata-section { padding: 0 24px 16px; }
+    .altdata-master-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 1200px) { .altdata-master-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 800px)  { .altdata-master-grid { grid-template-columns: 1fr; } }
+
+    /* Risk badges */
+    .risk-badge {
+      display: inline-block; padding: 2px 8px;
+      border-radius: 3px; font-size: 10px; font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+    .risk-low    { background: #00ff8812; color: var(--green);  border: 1px solid #00ff8828; }
+    .risk-medium { background: #ffd70012; color: var(--yellow); border: 1px solid #ffd70028; }
+    .risk-high   { background: #ff336612; color: var(--red);    border: 1px solid #ff336628; }
+    .risk-critical { background: #ff336625; color: var(--red);  border: 1px solid var(--red); }
+
+    /* Gauge bar */
+    .gauge-wrap { display: flex; align-items: center; gap: 8px; }
+    .gauge-track { flex: 1; height: 4px; background: #ffffff09; border-radius: 2px; }
+    .gauge-fill  { height: 100%; border-radius: 2px; transition: width 0.6s; }
+
+    /* Prediction market item */
+    .pred-item {
+      padding: 6px 8px; border-radius: var(--r-sm);
+      border: 1px solid var(--border2);
+      margin-bottom: 4px; display: flex; align-items: center; gap: 8px;
+    }
+    .pred-prob { font-family: 'SF Mono', monospace; font-size: 18px; font-weight: 700; min-width: 44px; }
+    .pred-q    { font-size: 11px; color: var(--muted); flex: 1; line-height: 1.4; }
+
+    /* Contagion chain */
+    .chain-item {
+      padding: 8px 10px; border-radius: var(--r-sm);
+      background: #ff336608; border-left: 3px solid var(--red);
+      margin-bottom: 6px;
+    }
+    .chain-name  { font-size: 12px; font-weight: 600; color: var(--red); margin-bottom: 4px; }
+    .chain-preds { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+    .chain-pred {
+      font-size: 10px; padding: 1px 6px; border-radius: 2px;
+      font-weight: 600;
+    }
+    .chain-pred.bull { background: #00ff8812; color: var(--green); }
+    .chain-pred.bear { background: #ff336612; color: var(--red); }
+
+    /* Mempool */
+    .mempool-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+    .mempool-val  { font-family: 'SF Mono', monospace; font-size: 20px; font-weight: 700; color: var(--blue); }
+    .mempool-key  { font-size: 10px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.08em; }
+
+    /* Dark pool */
+    .dp-row { display: flex; align-items: center; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid var(--border2); }
+    .dp-row:last-child { border-bottom: none; }
+    .dp-sym  { font-size: 12px; font-weight: 700; color: var(--blue); min-width: 48px; }
+    .dp-pct  { font-family: 'SF Mono', monospace; font-size: 13px; font-weight: 600; }
+    .dp-spike { font-size: 10px; color: var(--muted); }
+
     /* ── ALERTS PANEL ─────────────────────────────────── */
     #alerts-panel { position: fixed; bottom: 20px; right: 20px; width: 275px; z-index: 9000; display: flex; flex-direction: column-reverse; gap: 8px; }
     .alert-card {
@@ -347,14 +410,14 @@
 
 <!-- LOADING -->
 <div id="loading-overlay">
-  <div class="loading-logo">MARKET GOD 5.0</div>
+  <div class="loading-logo">MARKET GOD 6.0</div>
   <div class="loading-sub">INITIALIZING INTELLIGENCE ENGINE</div>
   <div class="loading-bar-track"><div class="loading-bar-fill"></div></div>
 </div>
 
 <!-- HEADER -->
 <header id="header">
-  <div class="header-logo">MARKET <span>GOD</span> 5.0</div>
+  <div class="header-logo">MARKET <span>GOD</span> 6.0</div>
   <div class="header-right">
     <div class="market-badge">
       <div class="market-badge-status" id="market-status-badge">● LOADING</div>
@@ -545,6 +608,130 @@
         <div id="ob-asks"></div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ALTERNATIVE DATA INTELLIGENCE -->
+<div class="section-sep" style="margin:0 24px;"></div>
+<div id="altdata-section" style="padding:16px 24px 16px;">
+  <div class="section-header">
+    <div class="section-title">Alternative Data Intelligence <span class="muted" style="font-size:10px;font-weight:400;margin-left:8px;">What the top 0.1% sees</span></div>
+    <span class="label" id="altdata-updated">Loading...</span>
+  </div>
+  <div class="altdata-master-grid">
+
+    <!-- GEOPOLITICAL RISK (GDELT) -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Geopolitical Risk <span style="color:var(--muted);font-size:9px;margin-left:4px;">GDELT</span></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+        <div style="font-family:'SF Mono',monospace;font-size:36px;font-weight:700;line-height:1;" id="geo-global-score">--</div>
+        <div>
+          <div id="geo-global-badge" class="risk-badge risk-medium">MODERATE</div>
+          <div class="muted" style="font-size:10px;margin-top:3px;">Global Risk Score</div>
+        </div>
+      </div>
+      <div id="geo-regions"></div>
+    </div>
+
+    <!-- PREDICTION MARKETS (POLYMARKET) -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Prediction Markets <span style="color:var(--muted);font-size:9px;margin-left:4px;">POLYMARKET</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="text-align:center;background:#ffffff05;border-radius:6px;padding:8px;">
+          <div style="font-family:'SF Mono',monospace;font-size:28px;font-weight:700;" id="pred-fed-cut">--%</div>
+          <div class="muted" style="font-size:10px;margin-top:2px;">Fed Rate Cut</div>
+        </div>
+        <div style="text-align:center;background:#ffffff05;border-radius:6px;padding:8px;">
+          <div style="font-family:'SF Mono',monospace;font-size:28px;font-weight:700;color:var(--red);" id="pred-recession">--%</div>
+          <div class="muted" style="font-size:10px;margin-top:2px;">Recession Risk</div>
+        </div>
+      </div>
+      <div class="feed-scroll" style="max-height:160px;" id="pred-markets-list"></div>
+    </div>
+
+    <!-- BITCOIN MEMPOOL -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Bitcoin Mempool <span style="color:var(--muted);font-size:9px;margin-left:4px;">MEMPOOL.SPACE</span></div>
+      <div class="mempool-grid" style="margin-bottom:12px;">
+        <div><div class="mempool-val" id="mp-count">--</div><div class="mempool-key">Pending TXs</div></div>
+        <div><div class="mempool-val" id="mp-fee">--</div><div class="mempool-key">Fastest Fee</div></div>
+        <div><div class="mempool-val" id="mp-congestion">--</div><div class="mempool-key">Congestion</div></div>
+      </div>
+      <div class="gauge-wrap" style="margin-bottom:6px;">
+        <span class="muted" style="font-size:10px;min-width:32px;">LOW</span>
+        <div class="gauge-track"><div class="gauge-fill" id="mp-gauge" style="width:0%;background:var(--blue);"></div></div>
+        <span class="muted" style="font-size:10px;min-width:36px;">HIGH</span>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px;" id="mp-signal-text">Loading...</div>
+    </div>
+
+    <!-- DARK POOL ACTIVITY (FINRA) -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Dark Pool Activity <span style="color:var(--muted);font-size:9px;margin-left:4px;">FINRA RegSho</span></div>
+      <div id="dark-pool-list" class="feed-scroll" style="max-height:220px;">
+        <div class="muted" style="padding:8px;font-size:11px;">Loading FINRA data...</div>
+      </div>
+    </div>
+
+    <!-- SHIPPING / BALTIC DRY INDEX -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Shipping Intelligence <span style="color:var(--muted);font-size:9px;margin-left:4px;">BDI · FRED</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="background:#ffffff05;border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-family:'SF Mono',monospace;font-size:24px;font-weight:700;" id="bdi-value">--</div>
+          <div class="muted" style="font-size:10px;margin-top:2px;">BDI Level</div>
+          <div style="font-size:11px;font-weight:600;margin-top:4px;" id="bdi-change">--</div>
+        </div>
+        <div style="background:#ffffff05;border-radius:6px;padding:10px;text-align:center;">
+          <div style="font-family:'SF Mono',monospace;font-size:24px;font-weight:700;" id="ship-regime">--</div>
+          <div class="muted" style="font-size:10px;margin-top:2px;">Shipping Regime</div>
+        </div>
+      </div>
+      <div class="gauge-wrap">
+        <span class="muted" style="font-size:10px;min-width:64px;">CONTRACTION</span>
+        <div class="gauge-track"><div class="gauge-fill" id="ship-gauge" style="width:50%;background:var(--yellow);"></div></div>
+        <span class="muted" style="font-size:10px;min-width:48px;">GROWTH</span>
+      </div>
+    </div>
+
+    <!-- CROSS-MARKET CONTAGION -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Contagion Engine <span style="color:var(--muted);font-size:9px;margin-left:4px;">Live Chain Detector</span></div>
+      <div id="contagion-active" style="margin-bottom:8px;">
+        <div class="muted" style="font-size:11px;padding:8px;">No active contagion chains detected</div>
+      </div>
+      <div id="contagion-predictions" class="feed-scroll" style="max-height:140px;"></div>
+    </div>
+
+  </div>
+
+  <!-- SUPPLY CHAIN + PATENTS + EARNINGS NLP (full-width row) -->
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px;">
+
+    <!-- SUPPLY CHAIN STRESS -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Supply Chain Stress <span style="color:var(--muted);font-size:9px;margin-left:4px;">SEC EDGAR</span></div>
+      <div id="supply-chain-list" class="feed-scroll" style="max-height:200px;">
+        <div class="muted" style="padding:8px;font-size:11px;">Loading SEC data...</div>
+      </div>
+    </div>
+
+    <!-- PATENT INTELLIGENCE -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Patent Intelligence <span style="color:var(--muted);font-size:9px;margin-left:4px;">USPTO · PatentsView</span></div>
+      <div id="patent-list" class="feed-scroll" style="max-height:200px;">
+        <div class="muted" style="padding:8px;font-size:11px;">Loading patent data...</div>
+      </div>
+    </div>
+
+    <!-- EARNINGS NLP -->
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Earnings Language NLP <span style="color:var(--muted);font-size:9px;margin-left:4px;">SEC 8-K</span></div>
+      <div id="earnings-nlp-list" class="feed-scroll" style="max-height:200px;">
+        <div class="muted" style="padding:8px;font-size:11px;">Loading 8-K analysis...</div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -1148,6 +1335,7 @@ function initSocket() {
     if (data.assets)    { Object.assign(STATE.assets, data.assets); buildAll(); }
     if (data.portfolio) updatePortfolio(data.portfolio);
     if (data.macro)     { STATE.macro = Object.assign({}, STATE.macro, data.macro); updateMacro(STATE.macro); updateFearGreed(STATE.macro.fg); }
+    if (data.altdata)   buildAltData(data.altdata);
     updateLastUpdate();
   });
 }
@@ -1262,6 +1450,217 @@ function updateMarketStatus() {
   }
 }
 
+// ── ALTERNATIVE DATA ────────────────────────────────────────────
+function renderGdelt(gdelt) {
+  if (!gdelt) return;
+  const score = gdelt.global_risk || 50;
+  const el = document.getElementById('geo-global-score');
+  const badge = document.getElementById('geo-global-badge');
+  if (el) { el.textContent = score; el.style.color = score > 70 ? 'var(--red)' : score > 55 ? 'var(--yellow)' : 'var(--green)'; }
+  if (badge) {
+    const lvl = score > 75 ? 'CRITICAL' : score > 60 ? 'HIGH' : score > 45 ? 'MODERATE' : 'LOW';
+    const cls = score > 75 ? 'risk-critical' : score > 60 ? 'risk-high' : score > 45 ? 'risk-medium' : 'risk-low';
+    badge.textContent = lvl; badge.className = 'risk-badge ' + cls;
+  }
+  const regions = gdelt.regions || {};
+  const el2 = document.getElementById('geo-regions');
+  if (el2 && Object.keys(regions).length) {
+    el2.innerHTML = Object.entries(regions).sort((a,b)=>b[1]-a[1]).map(([region, risk]) => {
+      const pct = risk; const cls = risk > 70 ? 'var(--red)' : risk > 50 ? 'var(--yellow)' : 'var(--green)';
+      return `<div style="margin-bottom:5px;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:2px;">
+          <span style="font-size:11px;text-transform:capitalize;">${region.replace('_',' ')}</span>
+          <span style="font-family:'SF Mono',monospace;font-size:11px;color:${cls};">${risk}</span>
+        </div>
+        <div class="gauge-track"><div class="gauge-fill" style="width:${pct}%;background:${cls};"></div></div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderPredictionMarkets(pm) {
+  if (!pm) return;
+  const fedEl = document.getElementById('pred-fed-cut');
+  const recEl = document.getElementById('pred-recession');
+  const listEl = document.getElementById('pred-markets-list');
+  if (fedEl) { const v = pm.fed_cut_prob || 50; fedEl.textContent = v.toFixed(0) + '%'; fedEl.style.color = v > 60 ? 'var(--green)' : v < 40 ? 'var(--red)' : 'var(--yellow)'; }
+  if (recEl) { const v = pm.recession_prob || 20; recEl.textContent = v.toFixed(0) + '%'; recEl.style.color = v > 40 ? 'var(--red)' : v > 25 ? 'var(--yellow)' : 'var(--green)'; }
+  const markets = pm.markets || [];
+  if (listEl && markets.length) {
+    listEl.innerHTML = markets.slice(0,8).map(m => {
+      const prob = m.yes_prob || 0;
+      const cls = prob > 65 ? 'var(--green)' : prob < 35 ? 'var(--red)' : 'var(--yellow)';
+      return `<div class="pred-item">
+        <span class="pred-prob" style="color:${cls};">${prob.toFixed(0)}%</span>
+        <span class="pred-q">${m.question || ''}</span>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderMempool(mp) {
+  if (!mp) return;
+  const fmt = n => n >= 1000000 ? (n/1000000).toFixed(1)+'M' : n >= 1000 ? (n/1000).toFixed(0)+'K' : String(n||0);
+  const s = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  s('mp-count',     fmt(mp.count || 0));
+  s('mp-fee',       (mp.fees && mp.fees.fastest ? mp.fees.fastest : '--') + ' sat');
+  s('mp-congestion', (mp.congestion || 0) + '/100');
+  const gauge = document.getElementById('mp-gauge');
+  if (gauge) { const c = mp.congestion || 0; gauge.style.width = c + '%'; gauge.style.background = c > 70 ? 'var(--red)' : c > 40 ? 'var(--yellow)' : 'var(--green)'; }
+  const sigText = document.getElementById('mp-signal-text');
+  if (sigText) {
+    const sig = mp.signal || 0;
+    const trend = mp.fee_trend || 'stable';
+    sigText.textContent = `Signal: ${sig > 0.3 ? '🟢 Bullish BTC' : sig < -0.1 ? '🔴 Low activity' : '🟡 Neutral'} · Fees ${trend}`;
+    sigText.style.color = sig > 0.3 ? 'var(--green)' : sig < -0.1 ? 'var(--red)' : 'var(--muted)';
+  }
+}
+
+function renderDarkPool(dp) {
+  const el = document.getElementById('dark-pool-list');
+  if (!el || !dp) return;
+  const entries = Object.entries(dp)
+    .filter(([, d]) => d && d.short_pct > 0)
+    .sort((a, b) => b[1].short_pct - a[1].short_pct)
+    .slice(0, 15);
+  if (!entries.length) { el.innerHTML = '<div class="muted" style="padding:8px;font-size:11px;">No dark pool data available yet</div>'; return; }
+  el.innerHTML = entries.map(([sym, d]) => {
+    const pct = d.short_pct; const spike = d.spike || 0;
+    const cls = pct > 55 ? 'var(--green)' : pct < 25 ? 'var(--red)' : 'var(--yellow)';
+    const spikeTxt = spike > 5 ? `+${spike.toFixed(1)}% spike` : spike < -5 ? `${spike.toFixed(1)}% fade` : '';
+    return `<div class="dp-row">
+      <span class="dp-sym">${sym}</span>
+      <div class="gauge-track" style="flex:1;margin:0 8px;"><div class="gauge-fill" style="width:${pct}%;background:${cls};"></div></div>
+      <span class="dp-pct" style="color:${cls};">${pct.toFixed(1)}%</span>
+      ${spikeTxt ? `<span class="dp-spike" style="margin-left:4px;color:var(--orange);">${spikeTxt}</span>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function renderShipping(shipping) {
+  if (!shipping) return;
+  const bdi = shipping.bdi || {};
+  const s = (id, v) => { const e = document.getElementById(id); if (e) e.textContent = v; };
+  s('bdi-value', bdi.latest ? bdi.latest.toLocaleString() : '--');
+  if (bdi.change_pct !== undefined) {
+    const el = document.getElementById('bdi-change');
+    if (el) { el.textContent = (bdi.change_pct >= 0 ? '+' : '') + bdi.change_pct.toFixed(1) + '% 30d'; el.style.color = bdi.change_pct >= 0 ? 'var(--green)' : 'var(--red)'; }
+  }
+  const regime = shipping.regime || 'NEUTRAL';
+  const regEl = document.getElementById('ship-regime');
+  if (regEl) { regEl.textContent = regime; regEl.style.color = regime === 'GROWTH' ? 'var(--green)' : regime === 'CONTRACTION' ? 'var(--red)' : 'var(--yellow)'; }
+  const gauge = document.getElementById('ship-gauge');
+  if (gauge) {
+    const sig = shipping.macro_signal || 0;
+    const pct = Math.round((sig + 1) / 2 * 100);
+    gauge.style.width = pct + '%';
+    gauge.style.background = sig > 0.2 ? 'var(--green)' : sig < -0.2 ? 'var(--red)' : 'var(--yellow)';
+  }
+}
+
+function renderContagion(contagion) {
+  const activeEl = document.getElementById('contagion-active');
+  const predsEl  = document.getElementById('contagion-predictions');
+  if (!contagion) return;
+  const chains = contagion.active_chains || [];
+  if (activeEl) {
+    if (!chains.length) {
+      activeEl.innerHTML = '<div class="muted" style="font-size:11px;padding:8px;">No active contagion chains</div>';
+    } else {
+      activeEl.innerHTML = chains.map(c => `<div class="chain-item"><div class="chain-name">${c.name}</div><div style="font-size:10px;color:var(--muted);">Active ${Math.floor(c.elapsed/60)}m ${c.elapsed%60}s</div></div>`).join('');
+    }
+  }
+  const preds = contagion.predictions || [];
+  if (predsEl && preds.length) {
+    predsEl.innerHTML = preds.slice(0,10).map(p => {
+      const cls = p.direction === 'BULLISH' ? 'bull' : 'bear';
+      const statusCls = p.status === 'MATERIALIZING' ? 'var(--green)' : p.status === 'PENDING' ? 'var(--yellow)' : 'var(--muted)';
+      return `<div style="padding:5px 0;border-bottom:1px solid var(--border2);">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span class="dp-sym">${p.ticker}</span>
+          <span class="chain-pred ${cls}">${p.direction}</span>
+          <span style="font-size:10px;color:${statusCls};margin-left:auto;">${p.status}</span>
+        </div>
+        <div style="font-size:10px;color:var(--muted);">${p.desc}</div>
+      </div>`;
+    }).join('');
+  }
+}
+
+function renderSupplyChain(sc) {
+  const el = document.getElementById('supply-chain-list');
+  if (!el || !sc) return;
+  const entries = Object.entries(sc).filter(([,d]) => d && d.stress > 0).sort((a,b) => b[1].stress - a[1].stress).slice(0, 12);
+  if (!entries.length) { el.innerHTML = '<div class="muted" style="font-size:11px;padding:8px;">No supply chain stress detected</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Ticker</th><th>Stress</th><th>Drivers</th></tr></thead><tbody>` +
+    entries.map(([sym, d]) => {
+      const stress = d.stress; const cls = stress > 70 ? 'var(--red)' : stress > 40 ? 'var(--yellow)' : 'var(--muted)';
+      const drivers = (d.drivers || []).map(x => x.supplier).slice(0,2).join(', ');
+      return `<tr>
+        <td class="blue" style="font-weight:700;">${sym}</td>
+        <td style="color:${cls};font-family:'SF Mono',monospace;">${stress}</td>
+        <td style="font-size:10px;color:var(--muted);">${drivers}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function renderPatents(patents) {
+  const el = document.getElementById('patent-list');
+  if (!el || !patents) return;
+  const entries = Object.entries(patents).filter(([,d]) => d && d.recent_filings > 0).sort((a,b) => b[1].recent_filings - a[1].recent_filings);
+  if (!entries.length) { el.innerHTML = '<div class="muted" style="font-size:11px;padding:8px;">Loading patent data...</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Ticker</th><th>Filed (90d)</th><th>Velocity</th></tr></thead><tbody>` +
+    entries.map(([sym, d]) => {
+      const vel = d.velocity || 0; const velCls = vel > 0 ? 'pos' : vel < 0 ? 'neg' : 'muted';
+      return `<tr>
+        <td class="blue" style="font-weight:700;">${sym}</td>
+        <td style="font-family:'SF Mono',monospace;">${d.recent_filings}</td>
+        <td class="${velCls}" style="font-family:'SF Mono',monospace;">${vel > 0 ? '+' : ''}${vel}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function renderEarningsNlp(enlp) {
+  const el = document.getElementById('earnings-nlp-list');
+  if (!el || !enlp) return;
+  const entries = Object.entries(enlp).filter(([,d]) => d && d.has_data).sort((a,b) => Math.abs(b[1].sentiment) - Math.abs(a[1].sentiment));
+  if (!entries.length) { el.innerHTML = '<div class="muted" style="font-size:11px;padding:8px;">Loading 8-K analysis...</div>'; return; }
+  el.innerHTML = `<table class="data-table"><thead><tr><th>Ticker</th><th>NLP Score</th><th>Signal</th></tr></thead><tbody>` +
+    entries.map(([sym, d]) => {
+      const s = d.sentiment || 0; const cls = s > 0.1 ? 'var(--green)' : s < -0.1 ? 'var(--red)' : 'var(--muted)';
+      const sig = s > 0.3 ? 'BULLISH' : s > 0.1 ? 'Slight +' : s < -0.3 ? 'BEARISH' : s < -0.1 ? 'Slight −' : 'NEUTRAL';
+      return `<tr>
+        <td class="blue" style="font-weight:700;">${sym}</td>
+        <td style="font-family:'SF Mono',monospace;color:${cls};">${(s * 100).toFixed(0)}</td>
+        <td style="font-size:11px;color:${cls};font-weight:600;">${sig}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+function buildAltData(alt) {
+  if (!alt) return;
+  renderGdelt(alt.gdelt);
+  renderPredictionMarkets(alt.prediction_markets);
+  renderMempool(alt.mempool);
+  renderDarkPool(alt.dark_pool);
+  renderShipping(alt.shipping);
+  renderContagion(alt.contagion);
+  renderSupplyChain(alt.supply_chain);
+  renderPatents(alt.patents);
+  renderEarningsNlp(alt.earnings_nlp);
+  const upd = document.getElementById('altdata-updated');
+  if (upd) upd.textContent = 'Updated ' + new Date().toLocaleTimeString('en-US', { hour12: false });
+}
+
+async function fetchAltData() {
+  try {
+    const r = await fetch('/api/altdata');
+    if (!r.ok) return;
+    const alt = await r.json();
+    buildAltData(alt);
+  } catch(e) {}
+}
+
 // ── BUILD ALL ─────────────────────────────────────────────────
 function buildAll() {
   buildTicker();
@@ -1275,6 +1674,7 @@ function buildAll() {
   updateMacro(STATE.macro);
   updateFearGreed(STATE.macro.fg);
   updatePortfolio(STATE.portfolio);
+  fetchAltData();
 }
 
 // ── INIT ──────────────────────────────────────────────────────
@@ -1300,6 +1700,7 @@ document.addEventListener('DOMContentLoaded', function () {
   setInterval(simulateTick,    800);
   setInterval(renderOrderBook, 3000);
   setInterval(updateLastUpdate, 1000);
+  setInterval(fetchAltData,   30000);  // alt data refreshes every 30s (most sources are slow)
   updateLastUpdate();
   updateMarketStatus();
   setInterval(updateMarketStatus, 30000);
