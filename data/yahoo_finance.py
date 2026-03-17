@@ -67,8 +67,35 @@ def _seed_history(tickers: list[str]):
     print('[Yahoo] history seed complete')
 
 
+# yfinance symbol → internal display symbol for crypto
+_CRYPTO_SEED_MAP = {
+    'BTC-USD': 'BTC',
+    'ETH-USD': 'ETH',
+    'SOL-USD': 'SOL',
+    'XRP-USD': 'XRP',
+}
+
+
+def _seed_crypto_history():
+    """Seed 5-min historical bars for crypto via yfinance so charts have real data."""
+    print('[Yahoo] seeding crypto history...')
+    for yf_sym, display_sym in _CRYPTO_SEED_MAP.items():
+        raw = _download_with_retry([yf_sym], period='1d', interval='5m')
+        if raw is not None and not raw.empty:
+            try:
+                df = raw.dropna(subset=['Close'])
+                for row in df.itertuples():
+                    ts = row.Index.timestamp() if hasattr(row.Index, 'timestamp') else time.time()
+                    store.push_price(display_sym, float(row.Close), float(row.Volume or 0), ts)
+            except Exception as e:
+                print(f'[Yahoo] crypto seed error for {yf_sym}: {e}')
+        time.sleep(_BATCH_DELAY)
+    print('[Yahoo] crypto history seed complete')
+
+
 def _refresh_loop():
     # Seed historical data once at startup
+    _seed_crypto_history()
     _seed_history(ALL_STOCK_TICKERS)
 
     while True:

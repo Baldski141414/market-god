@@ -1088,26 +1088,19 @@ function generateCandleData(basePrice, n) {
   return data;
 }
 
-function initChart() {
+async function initChart() {
   const canvas = document.getElementById('chart-canvas');
   const wrap   = document.getElementById('chart-canvas-wrap');
   if (!canvas || !window.Chart) return;
 
-  const candles  = generateCandleData((STATE.assets[STATE.selectedChart] || {}).price || 100);
-  const labels   = candles.map(c => {
-    const d = new Date(c.time * 1000);
-    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
-  });
-  const prices   = candles.map(c => c.close);
-  const isUp     = prices[prices.length - 1] >= prices[0];
-  const lineColor = isUp ? '#00ff88' : '#ff3366';
+  const lineColor = '#00ff88';
 
   STATE.chartInstance = new Chart(canvas.getContext('2d'), {
     type: 'line',
     data: {
-      labels,
+      labels: [],
       datasets: [{
-        data: prices,
+        data: [],
         borderColor: lineColor,
         backgroundColor: lineColor + '12',
         fill: true,
@@ -1155,9 +1148,11 @@ function initChart() {
   new ResizeObserver(() => {
     if (STATE.chartInstance) STATE.chartInstance.resize();
   }).observe(wrap);
+
+  await loadChartData(STATE.selectedChart);
 }
 
-function loadChartData(sym) {
+async function loadChartData(sym) {
   STATE.selectedChart = sym;
   const nameEl  = document.getElementById('chart-asset-name');
   const priceEl = document.getElementById('chart-price-disp');
@@ -1166,12 +1161,26 @@ function loadChartData(sym) {
   if (priceEl) priceEl.textContent = formatPrice(d.price);
   if (!STATE.chartInstance) return;
 
-  const candles   = generateCandleData((STATE.assets[sym] || {}).price || 100);
-  const labels    = candles.map(c => {
-    const dt = new Date(c.time * 1000);
-    return dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
-  });
-  const prices    = candles.map(c => c.close);
+  let labels = [], prices = [];
+  try {
+    const resp = await fetch('/api/chart/' + sym);
+    if (resp.ok) {
+      const json = await resp.json();
+      labels = json.labels || [];
+      prices = json.prices || [];
+    }
+  } catch (e) {}
+
+  // Fall back to simulation if the server has no history yet
+  if (prices.length < 2) {
+    const candles = generateCandleData((STATE.assets[sym] || {}).price || 100);
+    labels = candles.map(c => {
+      const dt = new Date(c.time * 1000);
+      return dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
+    });
+    prices = candles.map(c => c.close);
+  }
+
   const isUp      = prices[prices.length - 1] >= prices[0];
   const lineColor = isUp ? '#00ff88' : '#ff3366';
 

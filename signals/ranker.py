@@ -1,10 +1,12 @@
 """
 Opportunity Ranker — ranks all assets by signal score every 30 seconds.
 Publishes top-10 opportunities via event bus.
+Also fires EVT_SIGNAL_READY for every asset it scans so the paper trader
+sees a full-universe sweep across all 134+ assets on every cycle.
 """
 import threading
 import time
-from core.event_bus import bus, EVT_RANK_UPDATE
+from core.event_bus import bus, EVT_RANK_UPDATE, EVT_SIGNAL_READY
 from core.data_store import store
 from core.config import RANK_REFRESH_SECS, TOP_OPPORTUNITIES
 from signals.engine import calculate_signal
@@ -13,17 +15,19 @@ from signals.engine import calculate_signal
 def _rank_loop():
     while True:
         try:
-            all_signals = store.get_all_signals()
-            # Also compute for any symbol with price data but no recent signal
+            # Recompute signals for ALL symbols with price data on every sweep.
+            # This ensures the paper trader sees a full 134+ asset scan every
+            # RANK_REFRESH_SECS, not just assets that happened to get a price tick.
             prices = store.latest_prices
+            all_signals: dict = {}
             for sym in list(prices.keys()):
-                if sym not in all_signals:
-                    try:
-                        result = calculate_signal(sym)
-                        store.set_signal(sym, result)
-                        all_signals[sym] = result
-                    except Exception:
-                        pass
+                try:
+                    result = calculate_signal(sym)
+                    store.set_signal(sym, result)
+                    all_signals[sym] = result
+                    bus.publish(EVT_SIGNAL_READY, result)
+                except Exception:
+                    pass
 
             # Sort by score descending
             ranked = sorted(

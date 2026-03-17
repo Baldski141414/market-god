@@ -4,6 +4,7 @@ Real-time push via WebSocket, REST fallback for all data.
 """
 import time
 import json
+import datetime
 from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
@@ -99,6 +100,37 @@ def create_app():
     @app.route('/api/opportunities')
     def api_opportunities():
         return jsonify(store.opportunities)
+
+    @app.route('/api/chart/<symbol>')
+    def api_chart(symbol):
+        symbol = symbol.upper()
+        history = store.get_prices(symbol)  # list of (ts, price, volume)
+
+        now = time.time()
+        cutoff = now - 10 * 3600  # last 10 hours
+
+        recent = [(ts, price) for ts, price, _vol in history if ts >= cutoff]
+        if not recent:
+            recent = [(ts, price) for ts, price, _vol in history]
+        if not recent:
+            return jsonify({'labels': [], 'prices': [], 'symbol': symbol})
+
+        # Resample into 5-minute bins; keep latest price per bucket
+        bins: dict[int, tuple[float, float]] = {}
+        for ts, price in recent:
+            bucket = int(ts // 300) * 300
+            if bucket not in bins or ts > bins[bucket][0]:
+                bins[bucket] = (ts, price)
+
+        sorted_bins = sorted(bins.items())
+        labels = []
+        prices = []
+        for bucket_ts, (_ts, price) in sorted_bins:
+            dt = datetime.datetime.utcfromtimestamp(bucket_ts)
+            labels.append(dt.strftime('%H:%M'))
+            prices.append(round(price, 6))
+
+        return jsonify({'labels': labels, 'prices': prices, 'symbol': symbol})
 
     @app.route('/api/orderbook/<symbol>')
     def api_orderbook(symbol):
