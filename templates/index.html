@@ -276,6 +276,25 @@
     .trade-row.BUY  { background: #00ff8808; border-left: 2px solid #00ff8830; }
     .trade-row.SELL { background: #ff336608; border-left: 2px solid #ff336630; }
 
+    /* ── ALPACA PORTFOLIO ─────────────────────────────── */
+    #alpaca-section { padding: 0 24px 16px; }
+    .alpaca-header-row { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .alpaca-badge {
+      font-size: 9px; font-weight: 700; letter-spacing: 0.12em; padding: 2px 6px;
+      border-radius: 3px; background: #ffd70018; color: var(--yellow);
+      border: 1px solid #ffd70030; text-transform: uppercase;
+    }
+    .alpaca-status {
+      font-size: 10px; color: var(--muted);
+    }
+    .alpaca-status.active { color: var(--green); }
+    .alpaca-status.disabled { color: var(--dim); }
+    .alpaca-pos-table { width: 100%; border-collapse: collapse; }
+    .alpaca-pos-table th, .alpaca-pos-table td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--border2); font-size: 12px; }
+    .alpaca-pos-table th { font-size: 10px; font-weight: 600; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; }
+    .alpaca-pos-table .num { font-family: 'SF Mono', monospace; }
+    .alpaca-compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+
     /* ── INTELLIGENCE FEEDS ───────────────────────────── */
     #intel-section { padding: 0 24px 16px; }
     .intel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
@@ -562,6 +581,47 @@
       <div class="label" style="margin-bottom:10px;">Trade History</div>
       <div class="trade-history" id="trade-history">
         <div class="muted" style="text-align:center;padding:16px;font-size:11px;">No trades yet</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ALPACA PORTFOLIO -->
+<div class="section-sep" style="margin:0 24px;"></div>
+<div id="alpaca-section" style="padding:16px 24px 0;">
+  <div class="section-header">
+    <div class="alpaca-header-row">
+      <div class="section-title">Alpaca Portfolio</div>
+      <span class="alpaca-badge">Paper</span>
+      <span class="alpaca-status disabled" id="alpaca-status">Not connected</span>
+    </div>
+  </div>
+  <!-- Stats row -->
+  <div class="stats-row" id="alpaca-stats-row">
+    <div class="stat-card"><div class="stat-label">Alpaca Equity</div><div class="stat-value" id="alp-equity">--</div></div>
+    <div class="stat-card"><div class="stat-label">Alpaca Cash</div><div class="stat-value" id="alp-cash">--</div></div>
+    <div class="stat-card"><div class="stat-label">Alpaca P&amp;L</div><div class="stat-value" id="alp-pnl">--</div></div>
+    <div class="stat-card"><div class="stat-label">Alpaca P&amp;L %</div><div class="stat-value" id="alp-pnl-pct">--</div></div>
+    <div class="stat-card"><div class="stat-label">Positions</div><div class="stat-value" id="alp-positions">--</div></div>
+    <div class="stat-card"><div class="stat-label">Buying Power</div><div class="stat-value" id="alp-buying-power">--</div></div>
+  </div>
+  <!-- Side-by-side comparison -->
+  <div class="alpaca-compare-grid">
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Alpaca Open Positions</div>
+      <div style="overflow-x:auto;">
+        <table class="alpaca-pos-table">
+          <thead><tr><th>Symbol</th><th>Qty</th><th>Entry</th><th>Current</th><th>Market Val</th><th>Unrealized P&amp;L</th></tr></thead>
+          <tbody id="alpaca-positions-tbody">
+            <tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">--</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="label" style="margin-bottom:10px;">Performance Comparison</div>
+      <div id="alpaca-comparison">
+        <div class="muted" style="text-align:center;padding:16px;font-size:11px;">Loading...</div>
       </div>
     </div>
   </div>
@@ -1108,6 +1168,97 @@ function confirmReset() {
       STATE.portfolio = { cash: 100000, equity: 100000, pnl: 0, pnl_pct: 0, win_rate: 0, vs_spy: 0, positions: {}, trades: [] };
       updatePortfolio(STATE.portfolio);
     });
+}
+
+// ── ALPACA PORTFOLIO ───────────────────────────────────────────
+function updateAlpacaPortfolio(d) {
+  if (!d) return;
+
+  const statusEl = document.getElementById('alpaca-status');
+  if (!d.enabled) {
+    if (statusEl) { statusEl.textContent = 'API keys not configured'; statusEl.className = 'alpaca-status disabled'; }
+    document.getElementById('alp-equity')       && (document.getElementById('alp-equity').textContent       = '--');
+    document.getElementById('alp-cash')         && (document.getElementById('alp-cash').textContent         = '--');
+    document.getElementById('alp-pnl')          && (document.getElementById('alp-pnl').textContent          = '--');
+    document.getElementById('alp-pnl-pct')      && (document.getElementById('alp-pnl-pct').textContent      = '--');
+    document.getElementById('alp-positions')    && (document.getElementById('alp-positions').textContent    = '--');
+    document.getElementById('alp-buying-power') && (document.getElementById('alp-buying-power').textContent = '--');
+    return;
+  }
+
+  if (statusEl) {
+    statusEl.textContent  = d.status === 'ACTIVE' ? 'Connected' : d.status;
+    statusEl.className    = 'alpaca-status ' + (d.status === 'ACTIVE' ? 'active' : '');
+  }
+
+  const setV = (id, val, cls) => {
+    const e = document.getElementById(id); if (!e) return;
+    e.textContent = val;
+    if (cls) e.className = 'stat-value ' + cls;
+  };
+  const pnl    = d.pnl    || 0;
+  const pnlPct = d.pnl_pct || 0;
+  setV('alp-equity',       formatMoney(d.equity      || 0));
+  setV('alp-cash',         formatMoney(d.cash        || 0));
+  setV('alp-pnl',          formatMoney(pnl),    pnl    >= 0 ? 'pos' : 'neg');
+  setV('alp-pnl-pct',      formatPct(pnlPct),   pnlPct >= 0 ? 'pos' : 'neg');
+  setV('alp-positions',    d.num_positions || 0);
+  setV('alp-buying-power', formatMoney(d.buying_power || 0));
+
+  const tbody = document.getElementById('alpaca-positions-tbody');
+  if (tbody) {
+    const pos = d.positions || [];
+    if (!pos.length) {
+      tbody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;padding:16px;">No open positions</td></tr>';
+    } else {
+      tbody.innerHTML = pos.map(p => {
+        const plCls = p.unrealized_pl >= 0 ? 'pos' : 'neg';
+        return `<tr>
+          <td class="blue num" style="font-weight:700;">${p.symbol}</td>
+          <td class="num">${p.qty.toFixed(4)}</td>
+          <td class="muted num">${formatPrice(p.avg_price)}</td>
+          <td class="num">${formatPrice(p.current_price)}</td>
+          <td class="num">${formatMoney(p.market_value)}</td>
+          <td class="${plCls} num">${formatMoney(p.unrealized_pl)} <span class="muted" style="font-size:10px;">(${p.unrealized_plpc.toFixed(2)}%)</span></td>
+        </tr>`;
+      }).join('');
+    }
+  }
+
+  // Comparison panel
+  const cmp = document.getElementById('alpaca-comparison');
+  if (cmp) {
+    const ourEquity   = STATE.portfolio.total  || 100000;
+    const alpEquity   = d.equity || 0;
+    const ourPnlPct   = STATE.portfolio.pnl_pct || 0;
+    const alpPnlPct   = d.pnl_pct || 0;
+    const diff        = alpPnlPct - ourPnlPct;
+    const diffCls     = diff >= 0 ? 'pos' : 'neg';
+    cmp.innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+        <div style="text-align:center;padding:12px 0;">
+          <div class="label" style="margin-bottom:6px;">Market God (Internal)</div>
+          <div style="font-size:22px;font-weight:700;">${formatMoney(ourEquity)}</div>
+          <div class="${ourPnlPct >= 0 ? 'pos' : 'neg'}" style="font-size:13px;margin-top:4px;">${formatPct(ourPnlPct)}</div>
+        </div>
+        <div style="text-align:center;padding:12px 0;">
+          <div class="label" style="margin-bottom:6px;">Alpaca Paper</div>
+          <div style="font-size:22px;font-weight:700;">${formatMoney(alpEquity)}</div>
+          <div class="${alpPnlPct >= 0 ? 'pos' : 'neg'}" style="font-size:13px;margin-top:4px;">${formatPct(alpPnlPct)}</div>
+        </div>
+      </div>
+      <div style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;text-align:center;">
+        <span class="muted" style="font-size:11px;">Alpaca vs Internal: </span>
+        <span class="${diffCls}" style="font-weight:700;">${diff >= 0 ? '+' : ''}${diff.toFixed(2)}%</span>
+      </div>`;
+  }
+}
+
+function fetchAlpacaPortfolio() {
+  fetch('/api/alpaca/portfolio')
+    .then(r => r.json())
+    .then(updateAlpacaPortfolio)
+    .catch(() => {});
 }
 
 // ── INTELLIGENCE FEEDS ─────────────────────────────────────────
@@ -1696,11 +1847,13 @@ document.addEventListener('DOMContentLoaded', function () {
   }, 1800);
 
   initSocket();
-  setInterval(fetchAll,       5000);
-  setInterval(simulateTick,    800);
-  setInterval(renderOrderBook, 3000);
-  setInterval(updateLastUpdate, 1000);
-  setInterval(fetchAltData,   30000);  // alt data refreshes every 30s (most sources are slow)
+  setInterval(fetchAll,             5000);
+  setInterval(simulateTick,          800);
+  setInterval(renderOrderBook,      3000);
+  setInterval(updateLastUpdate,     1000);
+  setInterval(fetchAltData,        30000);
+  setInterval(fetchAlpacaPortfolio, 30000);  // poll Alpaca every 30s
+  fetchAlpacaPortfolio();                    // immediate first fetch
   updateLastUpdate();
   updateMarketStatus();
   setInterval(updateMarketStatus, 30000);

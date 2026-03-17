@@ -11,6 +11,7 @@ from flask_socketio import SocketIO, emit
 from core.data_store import store
 from core.event_bus import bus, EVT_SIGNAL_READY, EVT_ALERT, EVT_TRADE, EVT_RANK_UPDATE
 from signals.engine import calculate_signal
+import trading.alpaca as alpaca
 
 socketio: SocketIO = None
 
@@ -85,6 +86,10 @@ def create_app():
     def api_reset():
         store.reset_portfolio()
         return jsonify({'ok': True})
+
+    @app.route('/api/alpaca/portfolio')
+    def api_alpaca_portfolio():
+        return jsonify(alpaca.get_portfolio_summary())
 
     @app.route('/api/signal/<symbol>')
     def api_signal(symbol):

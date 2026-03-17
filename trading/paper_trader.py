@@ -28,6 +28,7 @@ from core.config import (
     MAX_CRYPTO_POSITIONS,
 )
 from trading.kelly import position_size
+import trading.alpaca as alpaca
 
 _lock = threading.Lock()
 
@@ -106,6 +107,13 @@ def _try_buy(symbol: str, price: float, signal: dict):
         })
         bus.publish(EVT_TRADE, {'action': 'BUY', 'symbol': symbol,
                                 'price': price, 'shares': shares})
+        # Mirror to Alpaca paper — fire-and-forget in background
+        threading.Thread(
+            target=alpaca.submit_order,
+            args=(symbol, 'buy'),
+            kwargs={'notional': invest},
+            daemon=True,
+        ).start()
 
     store.update_portfolio(_execute)
 
@@ -119,7 +127,8 @@ def _try_sell(symbol: str, price: float, reason: str = 'signal'):
         pos = p['positions'].get(symbol)
         if not pos:
             return
-        proceeds = pos['shares'] * price
+        sell_shares = pos['shares']
+        proceeds = sell_shares * price
         pnl = proceeds - pos['cost_basis']
         p['cash'] += proceeds
         del p['positions'][symbol]
@@ -129,7 +138,7 @@ def _try_sell(symbol: str, price: float, reason: str = 'signal'):
             'symbol':  symbol,
             'action':  'SELL',
             'price':   price,
-            'shares':  pos['shares'],
+            'shares':  sell_shares,
             'value':   proceeds,
             'pnl':     round(pnl, 2),
             'pnl_pct': round(pnl / pos['cost_basis'] * 100, 2),
@@ -139,6 +148,13 @@ def _try_sell(symbol: str, price: float, reason: str = 'signal'):
         })
         bus.publish(EVT_TRADE, {'action': 'SELL', 'symbol': symbol,
                                 'price': price, 'pnl': pnl})
+        # Mirror to Alpaca paper — close position by qty
+        threading.Thread(
+            target=alpaca.submit_order,
+            args=(symbol, 'sell'),
+            kwargs={'qty': sell_shares},
+            daemon=True,
+        ).start()
 
     store.update_portfolio(_execute)
 
