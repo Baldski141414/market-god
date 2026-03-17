@@ -70,4 +70,4 @@ def _rank_loop():
 def start_ranker():
     t = threading.Thread(target=_rank_loop, daemon=True, name='ranker')
     t.start()
-    print('[Ranker] started — stocks rescanned every 30s, crypto uses real-time cache')
+    print('[Ranker] started — rescans every 1s, crypto uses real-time cache')

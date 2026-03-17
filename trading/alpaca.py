@@ -8,6 +8,7 @@ import os
 import logging
 import requests
 from core.config import CRYPTO_SYMBOLS
+from core.data_store import store
 
 log = logging.getLogger(__name__)
 
@@ -192,17 +193,24 @@ def get_portfolio_summary():
     equity        = float(acct.get('equity') or 0)
     cash          = float(acct.get('cash') or 0)
     buying_power  = float(acct.get('buying_power') or 0)
-    start_equity  = 10_000.0    # paper account starts at $10k
-    pnl           = equity - start_equity
+
+    # Fix P&L baseline: use the actual Alpaca equity at start (not hardcoded $10k).
+    # Store it once on first call; reset when portfolio is reset.
+    if store.alpaca_start_equity is None and equity > 0:
+        store.alpaca_start_equity = equity
+        log.info(f'[Alpaca] Baseline equity set to ${equity:,.2f}')
+    start_equity = store.alpaca_start_equity or equity or 1.0
+    pnl          = equity - start_equity
 
     return {
-        'enabled':       True,
-        'equity':        round(equity, 2),
-        'cash':          round(cash, 2),
-        'buying_power':  round(buying_power, 2),
-        'pnl':           round(pnl, 2),
-        'pnl_pct':       round(pnl / start_equity * 100, 2),
-        'positions':     positions,
-        'num_positions': len(positions),
-        'status':        acct.get('status', 'unknown'),
+        'enabled':        True,
+        'equity':         round(equity, 2),
+        'cash':           round(cash, 2),
+        'buying_power':   round(buying_power, 2),
+        'pnl':            round(pnl, 2),
+        'pnl_pct':        round(pnl / start_equity * 100, 2) if start_equity else 0,
+        'start_equity':   round(start_equity, 2),
+        'positions':      positions,
+        'num_positions':  len(positions),
+        'status':         acct.get('status', 'unknown'),
     }

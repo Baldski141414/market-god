@@ -61,6 +61,9 @@ class DataStore:
             'created': time.time(),
         }
 
+        # Alpaca baseline equity (set on first fetch or after reset)
+        self.alpaca_start_equity: float = None
+
         # Signal accuracy tracking: signal_name -> {correct, total}
         self.signal_accuracy: dict[str, dict] = {}
 
@@ -197,6 +200,7 @@ class DataStore:
                 'spy_basis_time': None,
                 'created': time.time(),
             }
+            self.alpaca_start_equity = None  # force re-baseline on next Alpaca fetch
 
 # Global singleton
 store = DataStore()

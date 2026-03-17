@@ -15,7 +15,7 @@ from zoneinfo import ZoneInfo
 from core.event_bus import bus, EVT_PRICE_TICK, EVT_SIGNAL_READY, EVT_ALERT
 from core.data_store import store
 from core.config import (
-    SIGNAL_ALERT_THRESHOLD, CRYPTO_SYMBOLS, CRYPTO_WEIGHTS,
+    SIGNAL_ALERT_THRESHOLD, CRYPTO_SYMBOLS, CRYPTO_WEIGHTS, SIGNAL_LOOP_SECS,
 )
 from signals.indicator_cache import indicator_cache
 from signals.weights import get_weights
@@ -24,9 +24,9 @@ _ET   = ZoneInfo('America/New_York')
 _lock = threading.Lock()
 _last_calc: dict[str, float] = {}
 
-# Stocks get a small safety floor so a burst of simultaneous Yahoo ticks
-# for the same symbol doesn't fire redundant calculations.
-_STOCK_MIN_RECALC_MS = 100
+# Crypto: no debounce — every Kraken tick fires immediately
+# Stocks: no debounce either since we have a dedicated 1s loop
+_STOCK_MIN_RECALC_MS = 0
 
 
 def _is_market_hours() -> bool:
@@ -253,7 +253,42 @@ def _on_price_tick(data: dict):
         })
 
 
+def _signal_loop():
+    """
+    Background loop: re-evaluate ALL symbols every SIGNAL_LOOP_SECS (1s).
+    Uses cached indicator data — no API calls, pure math.
+    This ensures stocks get fresh signals even between Yahoo price ticks,
+    and picks up auxiliary data changes (congress, whale, options, etc.).
+    """
+    while True:
+        try:
+            symbols = list(store.latest_prices.keys())
+            for symbol in symbols:
+                try:
+                    is_crypto = symbol in CRYPTO_SYMBOLS
+                    # Stocks: only during market hours
+                    if not is_crypto and not _is_market_hours():
+                        continue
+                    result = calculate_signal(symbol)
+                    store.set_signal(symbol, result)
+                    bus.publish(EVT_SIGNAL_READY, result)
+                    if result['score'] >= SIGNAL_ALERT_THRESHOLD:
+                        bus.publish(EVT_ALERT, {
+                            'symbol':  symbol,
+                            'score':   result['score'],
+                            'signal':  result['signal'],
+                            'message': f"{symbol} hit {result['score']:.0f} — {result['signal']}",
+                        })
+                except Exception:
+                    pass
+        except Exception as e:
+            print(f'[SignalEngine] loop error: {e}')
+        time.sleep(SIGNAL_LOOP_SECS)
+
+
 def start_signal_engine():
-    """Subscribe to price ticks and start processing."""
+    """Subscribe to price ticks and start 1s evaluation loop."""
     bus.subscribe(EVT_PRICE_TICK, _on_price_tick)
-    print('[SignalEngine] started — event-driven, incremental cache, crypto real-time')
+    t = threading.Thread(target=_signal_loop, daemon=True, name='signal-loop')
+    t.start()
+    print('[SignalEngine] started — event-driven ticks + 1s eval loop, crypto real-time')
