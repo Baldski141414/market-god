@@ -1,6 +1,7 @@
 """
 Yahoo Finance poller.
-Fetches prices for all stock tickers every 30 seconds using batch download.
+Fetches prices for all stock tickers every 30 seconds.
+Rate-limited: max 5 tickers per batch, 0.5s delay between batches, with retry logic.
 Also pre-loads 5-minute historical data for technical indicators.
 """
 import threading
@@ -10,25 +11,35 @@ from core.config import ALL_STOCK_TICKERS, YAHOO_REFRESH_SECS
 from core.event_bus import bus, EVT_PRICE_TICK
 from core.data_store import store
 
-# Batch size for yfinance downloads
-_BATCH = 50
+# Rate-limit settings per user request
+_BATCH        = 5    # max tickers per request
+_BATCH_DELAY  = 0.5  # seconds between batches
+_MAX_RETRIES  = 3
+_RETRY_DELAY  = 2.0  # seconds between retries
 
 
-def _fetch_batch(tickers: list[str]):
-    try:
-        raw = yf.download(
-            tickers=' '.join(tickers),
-            period='1d',
-            interval='5m',
-            group_by='ticker',
-            auto_adjust=True,
-            progress=False,
-            threads=True,
-        )
-        return raw
-    except Exception as e:
-        print(f'[Yahoo] batch error: {e}')
-        return None
+def _download_with_retry(tickers: list[str], period: str, interval: str):
+    """Download yfinance data with retries and exponential back-off."""
+    for attempt in range(_MAX_RETRIES):
+        try:
+            raw = yf.download(
+                tickers=' '.join(tickers),
+                period=period,
+                interval=interval,
+                group_by='ticker',
+                auto_adjust=True,
+                progress=False,
+                threads=False,   # avoid internal threading that triggers rate-limits
+            )
+            return raw
+        except Exception as e:
+            if attempt < _MAX_RETRIES - 1:
+                wait = _RETRY_DELAY * (attempt + 1)
+                print(f'[Yahoo] download error (attempt {attempt+1}/{_MAX_RETRIES}): {e} — retrying in {wait}s')
+                time.sleep(wait)
+            else:
+                print(f'[Yahoo] download failed after {_MAX_RETRIES} attempts: {e}')
+    return None
 
 
 def _seed_history(tickers: list[str]):
@@ -36,18 +47,8 @@ def _seed_history(tickers: list[str]):
     print(f'[Yahoo] seeding history for {len(tickers)} tickers...')
     for i in range(0, len(tickers), _BATCH):
         batch = tickers[i:i + _BATCH]
-        try:
-            raw = yf.download(
-                tickers=' '.join(batch),
-                period='5d',
-                interval='5m',
-                group_by='ticker',
-                auto_adjust=True,
-                progress=False,
-                threads=True,
-            )
-            if raw is None or raw.empty:
-                continue
+        raw = _download_with_retry(batch, period='5d', interval='5m')
+        if raw is not None and not raw.empty:
             for sym in batch:
                 try:
                     if len(batch) == 1:
@@ -62,9 +63,7 @@ def _seed_history(tickers: list[str]):
                         store.push_price(sym, float(row.Close), float(row.Volume or 0), ts)
                 except Exception:
                     pass
-        except Exception as e:
-            print(f'[Yahoo] seed batch error: {e}')
-        time.sleep(0.5)
+        time.sleep(_BATCH_DELAY)
     print('[Yahoo] history seed complete')
 
 
@@ -76,29 +75,36 @@ def _refresh_loop():
         start = time.time()
         for i in range(0, len(ALL_STOCK_TICKERS), _BATCH):
             batch = ALL_STOCK_TICKERS[i:i + _BATCH]
-            try:
-                tickers_obj = yf.Tickers(' '.join(batch))
-                for sym in batch:
-                    try:
-                        info = tickers_obj.tickers[sym].fast_info
-                        price = float(info.last_price or 0)
-                        prev  = float(info.previous_close or 0)
-                        if price > 0:
-                            chg = (price - prev) / prev * 100 if prev else 0
-                            vol = float(getattr(info, 'three_month_average_volume', 0) or 0)
-                            store.push_price(sym, price, vol)
-                            bus.publish(EVT_PRICE_TICK, {
-                                'symbol': sym, 'price': price,
-                                'volume': vol, 'change_pct': chg,
-                                'ts': time.time(), 'source': 'yahoo',
-                            })
-                    except Exception:
-                        pass
-            except Exception as e:
-                print(f'[Yahoo] refresh error: {e}')
-            time.sleep(0.2)
+            for attempt in range(_MAX_RETRIES):
+                try:
+                    tickers_obj = yf.Tickers(' '.join(batch))
+                    for sym in batch:
+                        try:
+                            info  = tickers_obj.tickers[sym].fast_info
+                            price = float(info.last_price or 0)
+                            prev  = float(info.previous_close or 0)
+                            if price > 0:
+                                chg = (price - prev) / prev * 100 if prev else 0
+                                vol = float(getattr(info, 'three_month_average_volume', 0) or 0)
+                                store.push_price(sym, price, vol)
+                                bus.publish(EVT_PRICE_TICK, {
+                                    'symbol': sym, 'price': price,
+                                    'volume': vol, 'change_pct': chg,
+                                    'ts': time.time(), 'source': 'yahoo',
+                                })
+                        except Exception:
+                            pass
+                    break  # success — no retry needed
+                except Exception as e:
+                    if attempt < _MAX_RETRIES - 1:
+                        wait = _RETRY_DELAY * (attempt + 1)
+                        print(f'[Yahoo] refresh error (attempt {attempt+1}/{_MAX_RETRIES}): {e} — retrying in {wait}s')
+                        time.sleep(wait)
+                    else:
+                        print(f'[Yahoo] refresh failed for batch {batch}: {e}')
+            time.sleep(_BATCH_DELAY)
 
-        elapsed = time.time() - start
+        elapsed   = time.time() - start
         sleep_for = max(0, YAHOO_REFRESH_SECS - elapsed)
         time.sleep(sleep_for)
 
