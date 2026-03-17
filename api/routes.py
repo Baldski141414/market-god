@@ -9,6 +9,7 @@ from flask import Flask, render_template, jsonify, request
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit
 from core.data_store import store
+from core.config import STARTING_CASH
 from core.event_bus import bus, EVT_SIGNAL_READY, EVT_ALERT, EVT_TRADE, EVT_RANK_UPDATE
 from signals.engine import calculate_signal
 import trading.alpaca as alpaca
@@ -55,7 +56,7 @@ def create_app():
 
         trades = p.get('trades', [])
         total_value = p['cash'] + sum(pos['value'] for pos in positions)
-        pnl = total_value - 100_000
+        pnl = total_value - STARTING_CASH
         closed = [t for t in trades if t.get('pnl') is not None]
         wins = sum(1 for t in closed if t['pnl'] > 0)
         win_rate = wins / len(closed) * 100 if closed else 0
@@ -73,7 +74,7 @@ def create_app():
             'equity': round(sum(pos['value'] for pos in positions), 2),
             'total': round(total_value, 2),
             'pnl': round(pnl, 2),
-            'pnl_pct': round(pnl / 100_000 * 100, 2),
+            'pnl_pct': round(pnl / STARTING_CASH * 100, 2),
             'win_rate': round(win_rate, 1),
             'positions': positions,
             'trades': list(reversed(trades[-50:])),
@@ -85,7 +86,8 @@ def create_app():
     @app.route('/api/paper/reset', methods=['POST'])
     def api_reset():
         store.reset_portfolio()
-        return jsonify({'ok': True})
+        alpaca_result = alpaca.close_all_positions()
+        return jsonify({'ok': True, 'alpaca': alpaca_result})
 
     @app.route('/api/alpaca/portfolio')
     def api_alpaca_portfolio():

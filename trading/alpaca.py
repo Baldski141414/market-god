@@ -118,6 +118,49 @@ def get_positions():
     return []
 
 
+def close_all_positions():
+    """
+    Cancel all open orders and liquidate all positions.
+    Used to reset the paper account to a clean state.
+    Returns dict with counts of cancelled orders and closed positions.
+    """
+    s = _get_session()
+    if not s:
+        return {'ok': False, 'error': 'Alpaca not configured'}
+
+    result = {'ok': True, 'cancelled_orders': 0, 'closed_positions': 0, 'errors': []}
+
+    # Cancel all open orders
+    try:
+        resp = s.delete(f'{_BASE}/v2/orders', timeout=10)
+        if resp.status_code in (200, 207):
+            cancelled = resp.json() if resp.text.strip() else []
+            result['cancelled_orders'] = len(cancelled) if isinstance(cancelled, list) else 0
+            log.info(f'[Alpaca] Cancelled {result["cancelled_orders"]} orders')
+        else:
+            result['errors'].append(f'cancel_orders {resp.status_code}: {resp.text[:200]}')
+            log.warning(f'[Alpaca] cancel_orders {resp.status_code}: {resp.text[:200]}')
+    except Exception as exc:
+        result['errors'].append(f'cancel_orders: {exc}')
+        log.warning(f'[Alpaca] cancel_orders error: {exc}')
+
+    # Close all positions
+    try:
+        resp = s.delete(f'{_BASE}/v2/positions', params={'cancel_orders': 'true'}, timeout=10)
+        if resp.status_code in (200, 207):
+            closed = resp.json() if resp.text.strip() else []
+            result['closed_positions'] = len(closed) if isinstance(closed, list) else 0
+            log.info(f'[Alpaca] Closed {result["closed_positions"]} positions')
+        else:
+            result['errors'].append(f'close_positions {resp.status_code}: {resp.text[:200]}')
+            log.warning(f'[Alpaca] close_positions {resp.status_code}: {resp.text[:200]}')
+    except Exception as exc:
+        result['errors'].append(f'close_positions: {exc}')
+        log.warning(f'[Alpaca] close_positions error: {exc}')
+
+    return result
+
+
 def get_portfolio_summary():
     """
     Fetch account + positions and return a dashboard-ready dict.
@@ -149,7 +192,7 @@ def get_portfolio_summary():
     equity        = float(acct.get('equity') or 0)
     cash          = float(acct.get('cash') or 0)
     buying_power  = float(acct.get('buying_power') or 0)
-    start_equity  = 100_000.0   # paper account starts at $100k
+    start_equity  = 10_000.0    # paper account starts at $10k
     pnl           = equity - start_equity
 
     return {

@@ -87,7 +87,7 @@ CRYPTO_WEIGHTS = {
 }
 
 # Stock paper trading
-STARTING_CASH        = 100_000.0
+STARTING_CASH        = 10_000.0
 MAX_POSITIONS        = 20
 MIN_SIGNAL_TO_BUY    = 75
 STOP_LOSS_PCT        = -0.03
