@@ -38,7 +38,7 @@
       background: var(--bg);
       color: var(--white);
       font-family: var(--font-mono);
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1.5;
       overflow-x: hidden;
     }
@@ -117,6 +117,12 @@
     .ws-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--red); transition: background 0.3s; }
     .ws-dot.connected { background: var(--green); box-shadow: var(--glow-green); }
     .last-update { font-size: 11px; color: var(--dim); }
+    .market-status-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .market-status-badge {
+      font-family: var(--font-display); font-size: 11px; font-weight: 700; letter-spacing: 1px;
+      padding: 4px 12px; border-radius: 20px; border: 1px solid; transition: all 0.5s;
+    }
+    .market-status-time { font-size: 10px; color: var(--dim); letter-spacing: 1px; font-family: var(--font-display); }
 
     /* ─── TICKER TAPE ─────────────────────────────────────── */
     #ticker-wrap {
@@ -144,33 +150,33 @@
     /* ─── CARDS ──────────────────────────────────────────── */
     .card {
       background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 8px; padding: 14px 16px; transition: border-color 0.3s;
+      border-radius: 10px; padding: 16px 18px; transition: border-color 0.3s;
     }
     .card:hover { border-color: rgba(0,245,255,0.35); }
     .card-title {
-      font-family: var(--font-display); font-size: 9px; letter-spacing: 3px;
-      color: var(--cyan); text-transform: uppercase; margin-bottom: 12px; opacity: 0.85;
+      font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
+      color: var(--cyan); text-transform: uppercase; margin-bottom: 14px; opacity: 0.85;
     }
     .section-title {
-      font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
+      font-family: var(--font-display); font-size: 11px; letter-spacing: 3px;
       color: var(--cyan); text-transform: uppercase;
     }
-    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .section-sep { border: none; border-top: 1px solid var(--border); margin: 0 24px 16px; }
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-sep { border: none; border-top: 1px solid var(--border); margin: 0 24px 20px; }
 
     /* ─── OPPORTUNITIES BAR ──────────────────────────────── */
     #opps-bar {
-      padding: 12px 24px; border-bottom: 1px solid var(--border);
+      padding: 14px 24px; border-bottom: 1px solid var(--border);
       background: rgba(176,0,255,0.04);
     }
     .opps-title {
-      font-family: var(--font-display); font-size: 9px; letter-spacing: 3px;
-      color: var(--purple); margin-bottom: 10px; opacity: 0.9;
+      font-family: var(--font-display); font-size: 10px; letter-spacing: 3px;
+      color: var(--purple); margin-bottom: 12px; opacity: 0.9;
     }
-    .opps-grid { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+    .opps-grid { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 6px; }
     .opp-card {
-      flex: 0 0 130px; background: var(--card-bg2); border: 1px solid var(--border);
-      border-radius: 6px; padding: 10px 12px; cursor: pointer;
+      flex: 0 0 170px; background: var(--card-bg2); border: 1px solid var(--border);
+      border-radius: 8px; padding: 14px 16px; cursor: pointer;
       transition: all 0.2s; position: relative; overflow: hidden;
     }
     .opp-card:hover { border-color: var(--cyan); transform: translateY(-2px); }
@@ -179,13 +185,16 @@
       0%,100% { box-shadow: 0 0 8px rgba(0,245,255,0.3); }
       50% { box-shadow: 0 0 20px rgba(0,245,255,0.7), 0 0 40px rgba(0,245,255,0.3); }
     }
-    .opp-sym { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--white); letter-spacing: 1px; }
-    .opp-score { font-family: var(--font-display); font-size: 22px; font-weight: 900; line-height: 1; margin: 4px 0; }
+    .opp-sym { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--white); letter-spacing: 1px; }
+    .opp-score { font-family: var(--font-display); font-size: 40px; font-weight: 900; line-height: 1; margin: 6px 0 4px; }
     .opp-score.high { color: var(--green); text-shadow: var(--glow-green); }
     .opp-score.mid { color: var(--yellow); }
     .opp-score.low { color: var(--red); }
-    .opp-signal { font-size: 9px; letter-spacing: 1px; color: var(--dim); }
-    .opp-rank { position: absolute; top: 6px; right: 8px; font-size: 9px; color: var(--purple); font-family: var(--font-display); }
+    .opp-signal { font-size: 11px; letter-spacing: 1px; font-weight: 700; font-family: var(--font-display); }
+    .opp-signal.sig-buy { color: var(--green); }
+    .opp-signal.sig-sell { color: var(--red); }
+    .opp-signal.sig-hold { color: var(--yellow); }
+    .opp-rank { position: absolute; top: 8px; right: 10px; font-size: 10px; color: var(--purple); font-family: var(--font-display); font-weight: 700; }
 
     /* ─── MAIN GRID ──────────────────────────────────────── */
     #main-grid {
@@ -232,7 +241,7 @@
       padding: 5px 12px; border-radius: 4px; cursor: pointer; transition: all 0.2s;
     }
     .asset-btn:hover, .asset-btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,245,255,0.08); }
-    #tv-chart-container { flex: 1; min-height: 320px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+    #tv-chart-container { flex: 1; min-height: 440px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
     .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .chart-asset-name { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--cyan); }
     .chart-price-disp { font-family: var(--font-display); font-size: 18px; font-weight: 900; color: var(--white); }
@@ -270,17 +279,17 @@
     .stock-chg { font-size: 11px; }
 
     /* ─── PAPER TRADING ──────────────────────────────────── */
-    #paper-section { padding: 0 24px 16px; }
-    .stats-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 14px; }
-    .stat-card { background: var(--card-bg2); border: 1px solid var(--border); border-radius: 6px; padding: 10px; text-align: center; }
-    .stat-label { font-size: 9px; color: var(--dim); letter-spacing: 1px; margin-bottom: 4px; }
-    .stat-value { font-family: var(--font-display); font-size: 14px; font-weight: 700; color: var(--cyan); }
-    .stat-value.pos { color: var(--green); }
-    .stat-value.neg { color: var(--red); }
+    #paper-section { padding: 0 24px 20px; }
+    .stats-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 16px; }
+    .stat-card { background: var(--card-bg2); border: 1px solid var(--border); border-radius: 8px; padding: 14px 10px; text-align: center; }
+    .stat-label { font-size: 10px; color: var(--dim); letter-spacing: 2px; margin-bottom: 6px; font-family: var(--font-display); }
+    .stat-value { font-family: var(--font-display); font-size: 22px; font-weight: 900; color: var(--cyan); line-height: 1.1; }
+    .stat-value.pos { color: var(--green); text-shadow: 0 0 8px rgba(0,255,136,0.3); }
+    .stat-value.neg { color: var(--red); text-shadow: 0 0 8px rgba(255,34,68,0.3); }
     .paper-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     .trade-table { width: 100%; border-collapse: collapse; }
-    .trade-table th { font-family: var(--font-display); font-size: 8px; letter-spacing: 1px; color: var(--dim); text-align: left; padding: 4px 6px; border-bottom: 1px solid var(--border); }
-    .trade-table td { padding: 6px 6px; font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .trade-table th { font-family: var(--font-display); font-size: 9px; letter-spacing: 1px; color: var(--dim); text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    .trade-table td { padding: 8px 8px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
     .trade-history { max-height: 220px; overflow-y: auto; }
     .trade-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; border-radius: 4px; margin-bottom: 3px; }
     .trade-row.BUY { background: rgba(0,245,255,0.06); border-left: 2px solid var(--cyan); }
@@ -295,9 +304,9 @@
     /* ─── INTELLIGENCE FEEDS ─────────────────────────────── */
     #intel-section { padding: 0 24px 16px; }
     .intel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
-    .feed-item { padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 11px; line-height: 1.6; }
+    .feed-item { padding: 10px 10px; border-bottom: 1px solid rgba(255,255,255,0.06); font-size: 12px; line-height: 1.7; }
     .feed-item:last-child { border-bottom: none; }
-    .feed-tag { display: inline-block; padding: 1px 6px; border-radius: 3px; font-size: 8px; font-family: var(--font-display); letter-spacing: 1px; margin-right: 4px; }
+    .feed-tag { display: inline-block; padding: 2px 8px; border-radius: 3px; font-size: 9px; font-family: var(--font-display); letter-spacing: 1px; margin-right: 4px; }
     .feed-tag.BUY { background: rgba(0,255,136,0.15); color: var(--green); }
     .feed-tag.SELL { background: rgba(255,34,68,0.15); color: var(--red); }
     .feed-tag.congress { background: rgba(176,0,255,0.15); color: var(--purple); }
@@ -310,27 +319,30 @@
     /* ─── ORDER BOOK ─────────────────────────────────────── */
     #orderbook-section { padding: 0 24px 16px; }
     .ob-toggle-wrap { display: flex; gap: 8px; }
-    .ob-btn { background: var(--card-bg2); border: 1px solid var(--border); color: var(--dim); font-family: var(--font-display); font-size: 9px; letter-spacing: 1px; padding: 5px 14px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
+    .ob-btn { background: var(--card-bg2); border: 1px solid var(--border); color: var(--dim); font-family: var(--font-display); font-size: 10px; letter-spacing: 1px; padding: 6px 16px; border-radius: 4px; cursor: pointer; transition: all 0.2s; }
     .ob-btn.active { border-color: var(--cyan); color: var(--cyan); background: rgba(0,245,255,0.08); }
-    .ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-    .ob-side-title { font-family: var(--font-display); font-size: 9px; letter-spacing: 2px; margin-bottom: 6px; }
+    .ob-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .ob-side-title { font-family: var(--font-display); font-size: 11px; letter-spacing: 2px; margin-bottom: 8px; font-weight: 700; }
     .ob-side-title.bids { color: var(--green); }
     .ob-side-title.asks { color: var(--red); }
-    .ob-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; position: relative; font-size: 11px; }
+    .ob-row { display: flex; align-items: center; gap: 8px; padding: 5px 4px; position: relative; font-size: 13px; }
     .ob-depth-bar { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 2px; opacity: 0.12; pointer-events: none; transition: width 0.4s ease; }
-    .ob-price { width: 90px; font-weight: 600; }
+    .ob-price { width: 110px; font-weight: 700; font-family: var(--font-display); font-size: 14px; }
     .ob-price.bid { color: var(--green); }
     .ob-price.ask { color: var(--red); }
-    .ob-size { color: var(--dim); width: 80px; }
+    .ob-size { color: var(--dim); width: 100px; font-size: 12px; }
 
     /* ─── SIGNAL ACCURACY ────────────────────────────────── */
     #accuracy-section { padding: 0 24px 16px; }
     .acc-table { width: 100%; border-collapse: collapse; }
-    .acc-table th { font-family: var(--font-display); font-size: 8px; letter-spacing: 1px; color: var(--dim); text-align: left; padding: 5px 8px; border-bottom: 1px solid var(--border); }
-    .acc-table td { padding: 6px 8px; font-size: 11px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-    .sparkline-bar { display: flex; align-items: flex-end; gap: 2px; height: 18px; }
+    .acc-table th { font-family: var(--font-display); font-size: 9px; letter-spacing: 1px; color: var(--dim); text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    .acc-table td { padding: 9px 10px; font-size: 13px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .acc-table tr:hover td { background: rgba(0,245,255,0.03); }
+    .acc-pct { font-family: var(--font-display); font-size: 16px; font-weight: 900; }
+    .acc-name { font-size: 13px; font-weight: 600; }
+    .sparkline-bar { display: flex; align-items: flex-end; gap: 2px; height: 20px; }
     .sparkline-bar span { width: 5px; border-radius: 1px; background: var(--cyan); opacity: 0.7; }
-    .weight-bar { height: 4px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; width: 80px; }
+    .weight-bar { height: 5px; background: rgba(255,255,255,0.08); border-radius: 2px; overflow: hidden; width: 90px; }
     .weight-bar-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--cyan)); border-radius: 2px; transition: width 0.5s; }
 
     /* ─── ALERTS PANEL ───────────────────────────────────── */
@@ -385,6 +397,10 @@
     <div class="subtitle">EVENT-DRIVEN INTELLIGENCE ENGINE</div>
   </div>
   <div class="header-right">
+    <div class="market-status-wrap">
+      <div class="market-status-badge" id="market-status-badge">● LOADING</div>
+      <div class="market-status-time" id="market-status-time">--</div>
+    </div>
     <div class="last-update">UPDATED: <span id="last-update-time">--:--:--</span></div>
     <div class="ws-status">
       <div class="ws-dot" id="ws-dot"></div>
@@ -742,11 +758,13 @@ function buildOpportunities() {
   grid.innerHTML = sorted.map(([sym, d], i) => {
     const sc = d.score || 0;
     const pulse = sc >= 85 ? 'pulse-glow' : '';
+    const sig = d.signal || 'WATCH';
+    const sigCls = (sig === 'STRONG_BUY' || sig === 'BUY') ? 'sig-buy' : (sig === 'STRONG_SELL' || sig === 'SELL') ? 'sig-sell' : 'sig-hold';
     return `<div class="opp-card ${pulse}" onclick="selectChartAsset('${sym}')">
       <div class="opp-rank">#${i + 1}</div>
       <div class="opp-sym">${sym}</div>
       <div class="opp-score ${scoreClass(sc)}">${sc}</div>
-      <div class="opp-signal">${d.signal || 'WATCH'}</div>
+      <div class="opp-signal ${sigCls}">${sig.replace('_', ' ')}</div>
     </div>`;
   }).join('');
 }
@@ -926,20 +944,29 @@ function buildFeeds() {
   const cf = document.getElementById('congress-feed');
   if (cf) cf.innerHTML = CONGRESS_DATA.map(d =>
     `<div class="feed-item">
-      <span class="feed-tag congress">CONGRESS</span>
-      <span class="feed-tag ${d.tag}">${d.tag}</span>
-      <strong class="cyan">${d.ticker}</strong> &mdash; ${d.name}<br/>
-      <span class="dim">${d.action} ${d.amount} &middot; ${d.date}</span>
+      <div style="margin-bottom:4px;">
+        <span class="feed-tag congress">CONGRESS</span>
+        <span class="feed-tag ${d.tag}">${d.tag}</span>
+      </div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:2px;">
+        <span style="font-family:var(--font-display);font-size:18px;font-weight:900;color:var(--cyan);">${d.ticker}</span>
+        <span style="font-size:13px;color:var(--white);font-weight:600;">${d.name}</span>
+      </div>
+      <span class="dim" style="font-size:12px;">${d.action} ${d.amount} &middot; ${d.date}</span>
     </div>`
   ).join('');
 
   const wf = document.getElementById('whale-feed');
   if (wf) wf.innerHTML = WHALE_DATA.map(d =>
     `<div class="feed-item">
-      <span class="feed-tag whale">WHALE</span>
-      <strong class="cyan">${d.sym}</strong> ${d.action}<br/>
-      <span style="color:var(--white)">${d.amount}</span> <span class="dim">(${d.value})</span><br/>
-      <span class="dim">${d.from} &middot; ${d.time}</span>
+      <div style="margin-bottom:4px;">
+        <span class="feed-tag whale">WHALE</span>
+        <span style="font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--cyan);">${d.sym}</span>
+        <span class="dim" style="font-size:12px;margin-left:4px;">${d.action}</span>
+      </div>
+      <div style="font-family:var(--font-display);font-size:22px;font-weight:900;color:var(--green);line-height:1.1;">${d.value}</div>
+      <div style="font-size:12px;color:var(--white);margin-top:2px;">${d.amount}</div>
+      <span class="dim" style="font-size:11px;">${d.from} &middot; ${d.time}</span>
     </div>`
   ).join('');
 
@@ -1003,16 +1030,20 @@ function buildAccuracyTable() {
       const h = 4 + Math.floor(Math.random() * 14);
       return `<span style="height:${h}px;"></span>`;
     }).join('');
-    const c = sc.accuracy >= 0.75 ? 'var(--green)' : sc.accuracy >= 0.65 ? 'var(--yellow)' : 'var(--red)';
-    return `<tr>
-      <td style="color:var(--white);font-weight:500;">${sc.name}</td>
+    const isGreen = sc.accuracy >= 0.70;
+    const isYellow = sc.accuracy >= 0.60 && sc.accuracy < 0.70;
+    const c = isGreen ? 'var(--green)' : isYellow ? 'var(--yellow)' : 'var(--red)';
+    const rowBg = isGreen ? 'rgba(0,255,136,0.04)' : isYellow ? 'rgba(255,204,0,0.04)' : 'rgba(255,34,68,0.04)';
+    const borderLeft = isGreen ? 'border-left:3px solid var(--green);' : isYellow ? 'border-left:3px solid var(--yellow);' : 'border-left:3px solid var(--red);';
+    return `<tr style="background:${rowBg};${borderLeft}">
+      <td class="acc-name" style="color:var(--white);">${sc.name}</td>
       <td>
         <div class="weight-bar"><div class="weight-bar-fill" style="width:${sc.weight * 100}%;"></div></div>
-        <div style="font-size:10px;color:var(--dim);margin-top:2px;">${(sc.weight * 100).toFixed(0)}%</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:3px;">${(sc.weight * 100).toFixed(0)}%</div>
       </td>
-      <td style="color:${c};font-family:var(--font-display);font-weight:700;">${(sc.accuracy * 100).toFixed(1)}%</td>
+      <td class="acc-pct" style="color:${c};">${(sc.accuracy * 100).toFixed(1)}%</td>
       <td><div class="sparkline-bar">${bars}</div></td>
-      <td class="dim">${sc.wins} / ${sc.total}</td>
+      <td class="dim" style="font-size:12px;">${sc.wins} / ${sc.total}</td>
     </tr>`;
   }).join('');
 }
@@ -1043,7 +1074,7 @@ function initChart() {
 
   STATE.tvChart = LightweightCharts.createChart(container, {
     width: container.clientWidth,
-    height: 320,
+    height: 440,
     layout: { background: { type: 'solid', color: 'transparent' }, textColor: 'rgba(200,200,255,0.6)' },
     grid: { vertLines: { color: 'rgba(0,245,255,0.05)' }, horzLines: { color: 'rgba(0,245,255,0.05)' } },
     crosshair: {
@@ -1065,7 +1096,7 @@ function initChart() {
 
   const ro = new ResizeObserver(() => {
     if (STATE.tvChart && container.clientWidth > 0) {
-      STATE.tvChart.resize(container.clientWidth, 320);
+      STATE.tvChart.resize(container.clientWidth, 440);
     }
   });
   ro.observe(container);
@@ -1223,6 +1254,66 @@ function simulateTick() {
   updateLastUpdate();
 }
 
+// ── MARKET STATUS ───────────────────────────────────────────────
+function updateMarketStatus() {
+  const el = document.getElementById('market-status-badge');
+  const timeEl = document.getElementById('market-status-time');
+  if (!el || !timeEl) return;
+
+  const now = new Date();
+  try {
+    const fmt = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      weekday: 'short', hour: 'numeric', minute: 'numeric', hour12: false
+    });
+    const parts = fmt.formatToParts(now);
+    const get = t => parts.find(p => p.type === t).value;
+    const weekday = get('weekday');
+    const etHour = parseInt(get('hour'), 10);
+    const etMin = parseInt(get('minute'), 10);
+    const etTotal = etHour * 60 + etMin;
+    const OPEN = 9 * 60 + 30, CLOSE = 16 * 60;
+    const isWeekday = !['Sat', 'Sun'].includes(weekday);
+    const isOpen = isWeekday && etTotal >= OPEN && etTotal < CLOSE;
+
+    if (isOpen) {
+      el.textContent = '● MARKET OPEN';
+      el.style.color = 'var(--green)';
+      el.style.borderColor = 'rgba(0,255,136,0.4)';
+      el.style.background = 'rgba(0,255,136,0.1)';
+      const left = CLOSE - etTotal;
+      timeEl.textContent = `CLOSES IN ${Math.floor(left/60)}h ${left%60}m`;
+      timeEl.style.color = 'var(--green)';
+    } else {
+      el.textContent = '● MARKET CLOSED';
+      el.style.color = 'var(--red)';
+      el.style.borderColor = 'rgba(255,34,68,0.4)';
+      el.style.background = 'rgba(255,34,68,0.1)';
+      const dayMap = { Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6, Sun:0 };
+      const dayNum = dayMap[weekday] !== undefined ? dayMap[weekday] : 0;
+      let minsUntil;
+      if (isWeekday && etTotal < OPEN) {
+        minsUntil = OPEN - etTotal;
+      } else {
+        let d = 1, nd = (dayNum + 1) % 7;
+        while (nd === 0 || nd === 6) { d++; nd = (nd + 1) % 7; }
+        minsUntil = d * 1440 - etTotal + OPEN;
+      }
+      if (minsUntil >= 1440) {
+        const days = Math.floor(minsUntil / 1440);
+        const hrs = Math.floor((minsUntil % 1440) / 60);
+        timeEl.textContent = `OPENS IN ${days}d ${hrs}h`;
+      } else {
+        timeEl.textContent = `OPENS IN ${Math.floor(minsUntil/60)}h ${minsUntil%60}m`;
+      }
+      timeEl.style.color = 'var(--dim)';
+    }
+  } catch(e) {
+    el.textContent = '● MARKET';
+    timeEl.textContent = 'STATUS N/A';
+  }
+}
+
 // ── BUILD ALL ──────────────────────────────────────────────────
 function buildAll() {
   buildTicker();
@@ -1273,6 +1364,10 @@ document.addEventListener('DOMContentLoaded', function () {
   // Clock
   setInterval(updateLastUpdate, 1000);
   updateLastUpdate();
+
+  // Market status
+  updateMarketStatus();
+  setInterval(updateMarketStatus, 30000);
 
   // Demo alert after 3s
   setTimeout(function () {
