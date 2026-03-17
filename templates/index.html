@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Market God 5.0</title>
   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg:      #0a0a0f;
@@ -191,10 +190,11 @@
     .asset-btn:hover  { border-color: #ffffff28; color: var(--text); }
     .asset-btn.active { border-color: var(--blue); color: var(--blue); background: #00d4ff10; }
     #chart-canvas-wrap {
-      position: relative; flex: 1; min-height: 370px;
+      position: relative; flex: 1; min-height: 400px;
       border-radius: 8px; overflow: hidden;
       border: 1px solid var(--border); background: var(--surface);
     }
+    #tv-chart { display: block; width: 100%; height: 100%; border: none; }
 
     /* ── RIGHT COLUMN ─────────────────────────────────── */
     #right-col { display: flex; flex-direction: column; gap: 12px; }
@@ -416,7 +416,7 @@
       <button class="asset-btn" data-sym="SPY">SPY</button>
     </div>
     <div id="chart-canvas-wrap">
-      <canvas id="chart-canvas"></canvas>
+      <iframe id="tv-chart" src="https://s.tradingview.com/widgetembed/?symbol=BINANCE:BTCUSDT&interval=5&theme=dark&style=1&locale=en" width="100%" height="100%" frameborder="0" allowtransparency="true" scrolling="no"></iframe>
     </div>
   </div>
 
@@ -587,7 +587,6 @@ const STATE = {
   macro: { regime: 'NEUTRAL', fg: 52, vix: 18.5, ten_y: 4.35, dxy: 103.2, gold: 2050, oil: 78.5 },
   selectedChart: 'BTC',
   obAsset: 'BTC',
-  chartInstance: null,
   wsConnected: false
 };
 
@@ -1064,139 +1063,35 @@ function addAlert(sym, score, signal) {
   setTimeout(() => { if (card.parentElement) card.remove(); }, 10000);
 }
 
-// ── CHART (Chart.js) ───────────────────────────────────────────
-function generateCandleData(basePrice, n) {
-  n = n || 120;
-  const data = [];
-  const now  = Math.floor(Date.now() / 1000);
-  // Walk backwards from current price so chart ends at the live price
-  const closes = [basePrice];
-  for (let i = 1; i <= n; i++) {
-    const prev   = closes[closes.length - 1];
-    const change = (Math.random() - 0.5) * basePrice * 0.008;
-    closes.push(Math.max(prev + change, 0.0001));
-  }
-  closes.reverse(); // oldest first, last entry = basePrice (current price)
-  for (let i = 0; i <= n; i++) {
-    const time  = now - (n - i) * 300;
-    const close = closes[i];
-    const open  = i > 0 ? closes[i - 1] : close;
-    const high  = Math.max(open, close) * (1 + Math.random() * 0.004);
-    const low   = Math.min(open, close) * (1 - Math.random() * 0.004);
-    data.push({ time, open, high, low, close });
-  }
-  return data;
-}
-
-async function initChart() {
-  const canvas = document.getElementById('chart-canvas');
-  const wrap   = document.getElementById('chart-canvas-wrap');
-  if (!canvas || !window.Chart) return;
-
-  const lineColor = '#00ff88';
-
-  STATE.chartInstance = new Chart(canvas.getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: [],
-      datasets: [{
-        data: [],
-        borderColor: lineColor,
-        backgroundColor: lineColor + '12',
-        fill: true,
-        tension: 0.25,
-        pointRadius: 0,
-        borderWidth: 1.5,
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: { duration: 300 },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          mode: 'index',
-          intersect: false,
-          backgroundColor: '#111118',
-          borderColor: '#ffffff15',
-          borderWidth: 1,
-          titleColor: '#8888aa',
-          bodyColor: '#ffffff',
-          titleFont: { size: 10 },
-          bodyFont: { family: 'SF Mono, monospace', size: 12 },
-          callbacks: { label: ctx => ' ' + formatPrice(ctx.parsed.y) }
-        }
-      },
-      scales: {
-        x: {
-          grid: { color: '#ffffff06', drawBorder: false },
-          ticks: { color: '#8888aa', font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 },
-          border: { display: false }
-        },
-        y: {
-          position: 'right',
-          grid: { color: '#ffffff06', drawBorder: false },
-          ticks: { color: '#8888aa', font: { size: 10 }, callback: v => formatPrice(v) },
-          border: { display: false }
-        }
-      },
-      interaction: { mode: 'index', intersect: false },
-    }
-  });
-
-  new ResizeObserver(() => {
-    if (STATE.chartInstance) STATE.chartInstance.resize();
-  }).observe(wrap);
-
-  await loadChartData(STATE.selectedChart);
-}
-
-async function loadChartData(sym) {
-  STATE.selectedChart = sym;
-  const nameEl  = document.getElementById('chart-asset-name');
-  const priceEl = document.getElementById('chart-price-disp');
-  if (nameEl)  nameEl.textContent  = sym + '/USD';
-  const d = STATE.assets[sym] || {};
-  if (priceEl) priceEl.textContent = formatPrice(d.price);
-  if (!STATE.chartInstance) return;
-
-  let labels = [], prices = [];
-  try {
-    const resp = await fetch('/api/chart/' + sym);
-    if (resp.ok) {
-      const json = await resp.json();
-      labels = json.labels || [];
-      prices = json.prices || [];
-    }
-  } catch (e) {}
-
-  // Fall back to simulation if the server has no history yet
-  if (prices.length < 2) {
-    const candles = generateCandleData((STATE.assets[sym] || {}).price || 100);
-    labels = candles.map(c => {
-      const dt = new Date(c.time * 1000);
-      return dt.getHours().toString().padStart(2,'0') + ':' + dt.getMinutes().toString().padStart(2,'0');
-    });
-    prices = candles.map(c => c.close);
-  }
-
-  const isUp      = prices[prices.length - 1] >= prices[0];
-  const lineColor = isUp ? '#00ff88' : '#ff3366';
-
-  STATE.chartInstance.data.labels = labels;
-  STATE.chartInstance.data.datasets[0].data            = prices;
-  STATE.chartInstance.data.datasets[0].borderColor     = lineColor;
-  STATE.chartInstance.data.datasets[0].backgroundColor = lineColor + '12';
-  STATE.chartInstance.update('none');
-}
+// ── TRADINGVIEW CHART ──────────────────────────────────────────
+const TV_SYMBOLS = {
+  BTC:  'BINANCE:BTCUSDT',
+  ETH:  'BINANCE:ETHUSDT',
+  SOL:  'BINANCE:SOLUSDT',
+  XRP:  'BINANCE:XRPUSDT',
+  AAPL: 'NASDAQ:AAPL',
+  TSLA: 'NASDAQ:TSLA',
+  NVDA: 'NASDAQ:NVDA',
+  SPY:  'AMEX:SPY',
+};
 
 function selectChartAsset(sym) {
   STATE.selectedChart = sym;
   document.querySelectorAll('.asset-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.sym === sym);
   });
-  loadChartData(sym);
+  const iframe = document.getElementById('tv-chart');
+  const tvSym  = TV_SYMBOLS[sym] || ('BINANCE:' + sym + 'USDT');
+  if (iframe) {
+    iframe.src = 'https://s.tradingview.com/widgetembed/?symbol=' + tvSym + '&interval=5&theme=dark&style=1&locale=en';
+  }
+  const nameEl = document.getElementById('chart-asset-name');
+  if (nameEl) nameEl.textContent = sym + '/USD';
+  const priceEl = document.getElementById('chart-price-disp');
+  if (priceEl) {
+    const d = STATE.assets[sym] || {};
+    priceEl.textContent = formatPrice(d.price);
+  }
 }
 
 // ── WEBSOCKET ──────────────────────────────────────────────────
@@ -1397,7 +1292,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (ov) ov.classList.add('hide');
     setTimeout(function () {
       if (ov) ov.style.display = 'none';
-      initChart();
     }, 600);
   }, 1800);
 
